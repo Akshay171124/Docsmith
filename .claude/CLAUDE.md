@@ -68,5 +68,11 @@ stage 5, after candidates are narrowed — this keeps cost, latency, and flakine
 - Dependencies live in `requirements.txt`. Add new deps there, then `pip install -r requirements.txt`.
 - For optional heavyweight deps, make them gracefully optional in code.
 
+## Implementation Plans
+- Plans in `docs/superpowers/plans/` describe the **plan**, not the implementation:
+  task breakdown, files to touch, interfaces/signatures, the behavior/algorithm, the
+  test cases to assert, and exact commands. Do NOT paste full implementation code into a
+  plan — the actual code is written during execution and lives in `src/`/`tests/`.
+
 ## Dates
 - The current year is 2026. Use this when writing dates in docs, logs, etc.
