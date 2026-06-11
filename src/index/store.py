@@ -13,23 +13,6 @@ from src.models import DocSection, Index, Link, Symbol
 _DOCSECTION_TUPLE_FIELDS = ("heading_path", "referenced_symbols", "referenced_config_keys")
 
 
-def _section_to_dict(section: DocSection) -> dict[str, Any]:
-    """Serialize a DocSection to a plain dict.
-
-    Tuple fields are stored as JSON arrays and annotated so load can restore them.
-
-    Args:
-        section: The DocSection to serialize.
-
-    Returns:
-        A JSON-serializable dict representation of the section.
-    """
-    d = dataclasses.asdict(section)
-    # dataclasses.asdict already converts tuples to lists, which is what JSON wants.
-    # No extra work needed for serialization; the annotation is implicit in the schema.
-    return d
-
-
 def _section_from_dict(data: dict[str, Any]) -> DocSection:
     """Reconstruct a DocSection from a plain dict, restoring tuples.
 
@@ -60,7 +43,7 @@ def save_index(index: Index, path: str) -> None:
 
     payload: dict[str, Any] = {
         "symbols": {sid: dataclasses.asdict(sym) for sid, sym in index.symbols.items()},
-        "sections": {sec_id: _section_to_dict(sec) for sec_id, sec in index.sections.items()},
+        "sections": {sec_id: dataclasses.asdict(sec) for sec_id, sec in index.sections.items()},
         "links": [dataclasses.asdict(link) for link in index.links],
     }
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from src.index.store import load_index, save_index
@@ -81,6 +83,12 @@ def test_round_trip(tmp_path):
         "referenced_symbols must be a tuple, not a list"
     )
 
+    # Section referenced_config_keys survives and remains a tuple
+    assert loaded_section.referenced_config_keys == SECTION.referenced_config_keys
+    assert isinstance(loaded_section.referenced_config_keys, tuple), (
+        "referenced_config_keys must be a tuple, not a list"
+    )
+
     # Link fields survive
     loaded_link = loaded.links[0]
     assert loaded_link.via == LINK.via
@@ -102,5 +110,4 @@ def test_save_creates_parent_directories(tmp_path):
     nested_path = str(tmp_path / ".docsmith" / "index.json")
     save_index(_make_index(), nested_path)
 
-    import os
     assert os.path.isfile(nested_path), "index.json was not created at the nested path"
