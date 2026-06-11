@@ -12,6 +12,15 @@ from src.models import DocSection
 # Matches ATX headings: group 1 = hashes, group 2 = heading text (trailing # stripped)
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*$")
 
+# Matches inline-code spans (content between single backticks)
+_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+
+# All-caps config-key pattern: starts with A-Z, then 2+ chars of A-Z, 0-9, or _
+_CONFIG_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]{2,}$")
+
+# Valid Python/JS identifier
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 
 def _slug(text: str) -> str:
     """Lowercase text and replace runs of non-alphanumeric chars with a single '-'.
@@ -28,15 +37,31 @@ def _slug(text: str) -> str:
 
 
 def _extract_references(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Placeholder for the reference extractor (implemented in Task 6).
+    """Scan inline-code spans and classify each token as a symbol or config key.
+
+    Tokens between single backticks are extracted, then tested in order:
+    1. ALL-CAPS config-key pattern (``^[A-Z][A-Z0-9_]{2,}$``) → config key.
+    2. Valid identifier pattern (``^[A-Za-z_][A-Za-z0-9_]*$``) → symbol.
+    Tokens matching neither are ignored. Each list is de-duplicated preserving
+    first-seen order.
 
     Args:
         text: The raw section body text to scan for references.
 
     Returns:
-        A 2-tuple of (referenced_symbols, referenced_config_keys), both empty for now.
+        A 2-tuple of (referenced_symbols, referenced_config_keys).
     """
-    return ((), ())
+    symbols: dict[str, None] = {}
+    config_keys: dict[str, None] = {}
+
+    for match in _INLINE_CODE_RE.finditer(text):
+        token = match.group(1).strip()
+        if _CONFIG_KEY_RE.match(token):
+            config_keys[token] = None
+        elif _IDENTIFIER_RE.match(token):
+            symbols[token] = None
+
+    return tuple(symbols), tuple(config_keys)
 
 
 def parse_markdown(path: str) -> list[DocSection]:
