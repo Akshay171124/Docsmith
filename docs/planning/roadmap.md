@@ -25,9 +25,9 @@ Goal: parse a repo into code symbols + doc sections, link them by name, persist 
 
 | Task | Description | Status |
 |---|---|---|
-| 0 | Pin tree-sitter deps + fixture repo | ⬜ |
-| 1 | Core data models (`src/models.py`) | ⬜ |
-| 2 | Language registry (`src/parsing/languages.py`) | ⬜ |
+| 0 | Pin tree-sitter deps + fixture repo | ✅ |
+| 1 | Core data models (`src/models.py`) | ✅ |
+| 2 | Language registry (`src/parsing/languages.py`) | ✅ |
 | 3 | Code parser — Python symbols + docstrings | ⬜ |
 | 4 | Code parser — TS/JS/Go | ⬜ |
 | 5 | Doc parser — split into sections | ⬜ |
