@@ -7,6 +7,9 @@ from tree_sitter_languages import get_language, get_parser
 from src.models import Symbol
 from src.parsing.languages import SYMBOL_QUERIES, language_for_path
 
+_CLASS_TYPES = frozenset({"class_definition", "class_declaration", "type_declaration"})
+_METHOD_TYPES = frozenset({"method_definition", "method_declaration"})
+
 
 def parse_file(path: str) -> list[Symbol]:
     """Parse a source file and return all extracted symbols.
@@ -127,9 +130,9 @@ def _kind_for(def_node, qualified_name: str) -> str:
         One of "class", "method", or "function".
     """
     node_type = def_node.type
-    if "class" in node_type or node_type == "type_declaration":
+    if node_type in _CLASS_TYPES:
         return "class"
-    if "method" in node_type or "." in qualified_name:
+    if node_type in _METHOD_TYPES or "." in qualified_name:
         return "method"
     return "function"
 

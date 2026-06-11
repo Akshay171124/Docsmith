@@ -29,7 +29,9 @@ class TestParseFilePython:
         assert sym.docstring is not None
         assert "Create a user record" in sym.docstring
         assert sym.language == "python"
-        assert sym.start_line >= 1
+        assert sym.start_line == 4
+        assert sym.end_line == 13
+        assert sym.id == "tests/fixtures/sample_repo/app.py::create_user"
 
     def test_deactivate_qualified_name_and_kind(self):
         """The deactivate symbol has qualified_name UserService.deactivate and kind method."""
