@@ -61,7 +61,9 @@ stage 5, after candidates are narrowed — this keeps cost, latency, and flakine
   explicitly requested. No `Co-Authored-By`, "Generated with", "AI-assisted", or similar.
 - Push only when explicitly asked.
 - **DCP**: when the user says "DCP", do: **D**ouble-check the code, **C**ommit, **P**ush.
-- **Merging**: squash-and-merge branches into main.
+- **Branch + PR workflow**: do feature work on a branch, push it to `origin`, and open a
+  Pull Request for review. Merging happens on GitHub via **squash-and-merge**. Do NOT
+  merge locally into `main`. (This keeps the branch and per-commit history visible/reviewable.)
 
 ## Python Environment
 - Use a local virtualenv: `python3.11 -m venv .venv && source .venv/bin/activate`.
