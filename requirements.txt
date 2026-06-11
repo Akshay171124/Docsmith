@@ -1,6 +1,6 @@
 # --- parsing ---
-tree-sitter>=0.21
-tree-sitter-languages>=1.10      # prebuilt grammars for 40+ languages
+tree-sitter==0.21.3
+tree-sitter-languages==1.10.2
 
 # --- index / retrieval ---
 chromadb>=0.5                    # file-based vector store

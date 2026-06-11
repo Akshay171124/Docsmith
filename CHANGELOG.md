@@ -7,6 +7,20 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Index Core (Week 1)** — the deterministic, zero-LLM foundation:
+  - Core data models: `Symbol`, `DocSection`, `Link`, `Index` (`src/models.py`).
+  - Language registry with tree-sitter symbol queries for Python, TypeScript, JavaScript,
+    and Go (`src/parsing/languages.py`).
+  - Code parser extracting functions/classes/methods (with Python docstrings) via
+    tree-sitter (`src/parsing/code_parser.py`).
+  - Markdown doc parser splitting by heading and extracting symbol/config-key references
+    (`src/parsing/doc_parser.py`).
+  - Deterministic symbol↔section linker by name (`src/index/linker.py`).
+  - JSON index persistence with tuple-preserving round-trip (`src/index/store.py`).
+  - Index builder that walks a repo, parses code + docs, links, and writes
+    `.docsmith/index.json` (`src/index/builder.py`); disambiguates colliding ids.
+  - `docsmith.py build-index` CLI subcommand.
+  - 45 passing tests (unit + integration); fixture repo spanning four languages + markdown.
 - Design spec for the self-healing documentation system
   (`docs/superpowers/specs/2026-06-11-self-healing-docs-design.md`).
 - Forge-inspired repository scaffolding: `src/` (parsing, index, detection, repair,

@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Executing Week 1 — Index Core.
+**Current focus:** Week 1 (Index Core) complete ✅ — next up is Week 2 (Retrieval layer).
 
 ---
 
@@ -18,28 +18,33 @@ file is the human-facing rollup of *where we are*.
 - ✅ CI workflow (ruff + pytest) green
 - ✅ Living docs established (this file + `CHANGELOG.md`)
 
-## Week 1 — Index Core 🚧
+## Week 1 — Index Core ✅
 Detailed plan: [2026-06-11-index-core.md](../superpowers/plans/2026-06-11-index-core.md).
+**Done:** 45 tests passing, `python docsmith.py build-index` produces `.docsmith/index.json`
+for Python/TS/JS/Go + markdown. Deferred to Week 2: path normalization of ids (M1) and a
+stable id scheme for incremental joins.
 Goal: parse a repo into code symbols + doc sections, link them by name, persist to
 `.docsmith/index.json`. Pure/deterministic, zero LLM.
 
 | Task | Description | Status |
 |---|---|---|
-| 0 | Pin tree-sitter deps + fixture repo | ⬜ |
-| 1 | Core data models (`src/models.py`) | ⬜ |
-| 2 | Language registry (`src/parsing/languages.py`) | ⬜ |
-| 3 | Code parser — Python symbols + docstrings | ⬜ |
-| 4 | Code parser — TS/JS/Go | ⬜ |
-| 5 | Doc parser — split into sections | ⬜ |
-| 6 | Doc parser — reference extraction | ⬜ |
-| 7 | Deterministic linker (`src/index/linker.py`) | ⬜ |
-| 8 | Index store — JSON round-trip | ⬜ |
-| 9 | Index builder — walk repo → parse → link | ⬜ |
-| 10 | `build-index` CLI subcommand | ⬜ |
+| 0 | Pin tree-sitter deps + fixture repo | ✅ |
+| 1 | Core data models (`src/models.py`) | ✅ |
+| 2 | Language registry (`src/parsing/languages.py`) | ✅ |
+| 3 | Code parser — Python symbols + docstrings | ✅ |
+| 4 | Code parser — TS/JS/Go | ✅ |
+| 5 | Doc parser — split into sections | ✅ |
+| 6 | Doc parser — reference extraction | ✅ |
+| 7 | Deterministic linker (`src/index/linker.py`) | ✅ |
+| 8 | Index store — JSON round-trip | ✅ |
+| 9 | Index builder — walk repo → parse → link | ✅ |
+| 10 | `build-index` CLI subcommand | ✅ |
 
-## Week 2 — Retrieval layer ⬜
+## Week 2 — Retrieval layer 🚧 (next)
 Local embeddings (bge-small) + Chroma, hybrid linking (symbol + embedding recall),
 incremental index updates, API-reference + config/CLI/env extractors.
+Carry-over from Week 1: normalize symbol/section ids to repo-relative paths (M1) and
+settle a stable id scheme before building incremental joins on top of it.
 
 ## Week 3 — Detection ⬜
 Diff parsing, symbol mapping for changed spans, triage filter, LLM staleness

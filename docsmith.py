@@ -1,21 +1,51 @@
 """Docsmith entry point.
 
-Single CLI entry (mirrors Forge's `forge.py`) usable both locally and inside the
-GitHub Action:
+Single CLI entry usable both locally and inside the GitHub Action:
 
-    python docsmith.py --repo . --base main --head HEAD      # local run
-    python docsmith.py --github-action                       # CI run (reads event ctx)
-
-Local mode is for development and the evaluation harness; --github-action mode reads
-the PR context from the Actions environment and posts results back to GitHub.
+    python docsmith.py build-index --repo . --output .docsmith/index.json
 """
 
-# TODO(impl): wire argparse + dispatch into src/ pipeline per
-#             docs/superpowers/specs/2026-06-11-self-healing-docs-design.md
+from __future__ import annotations
+
+import argparse
+
+from src.index.builder import build_index
 
 
 def main() -> None:
-    raise NotImplementedError("Docsmith entry point not yet implemented.")
+    """Parse CLI arguments and dispatch to the appropriate subcommand."""
+    parser = argparse.ArgumentParser(
+        prog="docsmith",
+        description="Docsmith — keep your docs in sync with your code.",
+    )
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    build_parser = subparsers.add_parser(
+        "build-index",
+        help="Walk a repository and build the code-docs index.",
+    )
+    build_parser.add_argument(
+        "--repo",
+        default=".",
+        help="Repository root to scan (default: current directory).",
+    )
+    build_parser.add_argument(
+        "--output",
+        default=".docsmith/index.json",
+        help="Path to write the index JSON (default: .docsmith/index.json).",
+    )
+
+    args = parser.parse_args()
+
+    if args.subcommand == "build-index":
+        index = build_index(args.repo, output_path=args.output)
+        n_symbols = len(index.symbols)
+        n_sections = len(index.sections)
+        n_links = len(index.links)
+        print(
+            f"Indexed {n_symbols} symbols, {n_sections} sections,"
+            f" {n_links} links -> {args.output}"
+        )
 
 
 if __name__ == "__main__":
