@@ -68,6 +68,14 @@ stage 5, after candidates are narrowed — this keeps cost, latency, and flakine
 - Dependencies live in `requirements.txt`. Add new deps there, then `pip install -r requirements.txt`.
 - For optional heavyweight deps, make them gracefully optional in code.
 
+## Living Docs (keep ALWAYS up to date)
+Two files must reflect reality after every meaningful change — update them in the same
+commit as the change:
+- `docs/planning/roadmap.md` — progress tracker. Flip task/phase status (⬜ → 🚧 → ✅)
+  as work proceeds; keep "Current focus" accurate.
+- `CHANGELOG.md` — append every notable change under **Unreleased** (Keep a Changelog
+  format: Added / Changed / Fixed).
+
 ## Implementation Plans
 - Plans in `docs/superpowers/plans/` describe the **plan**, not the implementation:
   task breakdown, files to touch, interfaces/signatures, the behavior/algorithm, the
