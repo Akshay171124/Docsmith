@@ -28,10 +28,10 @@ Goal: parse a repo into code symbols + doc sections, link them by name, persist 
 | 0 | Pin tree-sitter deps + fixture repo | ✅ |
 | 1 | Core data models (`src/models.py`) | ✅ |
 | 2 | Language registry (`src/parsing/languages.py`) | ✅ |
-| 3 | Code parser — Python symbols + docstrings | ⬜ |
-| 4 | Code parser — TS/JS/Go | ⬜ |
-| 5 | Doc parser — split into sections | ⬜ |
-| 6 | Doc parser — reference extraction | ⬜ |
+| 3 | Code parser — Python symbols + docstrings | ✅ |
+| 4 | Code parser — TS/JS/Go | ✅ |
+| 5 | Doc parser — split into sections | ✅ |
+| 6 | Doc parser — reference extraction | ✅ |
 | 7 | Deterministic linker (`src/index/linker.py`) | ⬜ |
 | 8 | Index store — JSON round-trip | ⬜ |
 | 9 | Index builder — walk repo → parse → link | ⬜ |
