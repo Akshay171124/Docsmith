@@ -1,0 +1,43 @@
+name: "Docsmith"
+description: "Detect and repair documentation made stale by code changes on a pull request."
+author: "Akshay Prajapati"
+branding:
+  icon: "book-open"
+  color: "orange"
+
+inputs:
+  anthropic-api-key:
+    description: "Anthropic API key used for staleness verification, repair, and validation."
+    required: true
+  github-token:
+    description: "GitHub token for reading diffs and opening PRs/comments."
+    required: false
+    default: ${{ github.token }}
+  confidence-threshold:
+    description: "Minimum confidence (0-1) to auto-open a companion fix-PR instead of flagging for review."
+    required: false
+    default: "0.8"
+  doc-globs:
+    description: "Comma-separated globs for documentation files to monitor."
+    required: false
+    default: "**/*.md,docs/**"
+  ignore-globs:
+    description: "Comma-separated globs to exclude from analysis."
+    required: false
+    default: "node_modules/**,**/vendor/**"
+  auto-fix:
+    description: "Whether to open companion fix-PRs for high-confidence corrections. Never auto-merges."
+    required: false
+    default: "true"
+
+outputs:
+  verified:
+    description: "Number of linked doc sections confirmed still accurate."
+  fixed:
+    description: "Number of high-confidence corrections opened as companion PRs."
+  flagged:
+    description: "Number of low-confidence sections flagged for human review."
+
+runs:
+  using: "docker"
+  image: "Dockerfile"

@@ -1,0 +1,21 @@
+# --- parsing ---
+tree-sitter>=0.21
+tree-sitter-languages>=1.10      # prebuilt grammars for 40+ languages
+
+# --- index / retrieval ---
+chromadb>=0.5                    # file-based vector store
+sentence-transformers>=3.0       # local embeddings (BAAI/bge-small-en-v1.5)
+
+# --- LLM ---
+anthropic>=0.40                  # Claude Sonnet client
+
+# --- git / github ---
+PyGithub>=2.3
+unidiff>=0.7                     # structured diff parsing
+
+# --- config / misc ---
+PyYAML>=6.0
+
+# --- dev / test (kept here for a single-file Action install; split later if needed) ---
+pytest>=8.0
+ruff>=0.6

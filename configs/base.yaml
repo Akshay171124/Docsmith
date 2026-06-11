@@ -1,0 +1,45 @@
+# Docsmith base configuration.
+# Layered: base.yaml <- optional repo override <- GitHub Action inputs (highest priority).
+# Mirrors Forge's `inherit: base.yaml` convention.
+
+# Confidence (0-1) at/above which a correction is auto-opened as a companion fix-PR.
+# Below this, the section is flagged inline for human review instead.
+confidence_threshold: 0.8
+
+# Whether to open companion fix-PRs at all. Docsmith NEVER auto-merges regardless.
+auto_fix: true
+
+# Documentation sources to monitor.
+docs:
+  globs:
+    - "**/*.md"
+    - "docs/**"
+  ignore:
+    - "node_modules/**"
+    - "**/vendor/**"
+    - "**/CHANGELOG.md"
+
+# Languages to parse for code symbols (tree-sitter grammar names).
+languages:
+  - python
+  - typescript
+  - javascript
+  - go
+
+# Triage: change kinds that can never affect docs (stage 4 drops these).
+triage:
+  ignore_paths:
+    - "**/test_*.py"
+    - "**/*.test.ts"
+  skip_comment_only: true
+  skip_whitespace_only: true
+
+# Retrieval.
+linking:
+  embedding_model: "BAAI/bge-small-en-v1.5"
+  embedding_similarity_threshold: 0.55   # recall layer; symbol-match is always primary
+
+# LLM.
+llm:
+  model: "claude-sonnet-4-6"
+  max_investigator_tool_calls: 6
