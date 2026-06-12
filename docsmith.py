@@ -34,11 +34,17 @@ def main() -> None:
         default=".docsmith/index.json",
         help="Path to write the index JSON (default: .docsmith/index.json).",
     )
+    build_parser.add_argument(
+        "--embeddings",
+        action="store_true",
+        default=False,
+        help="Enable hybrid embedding-based linking (requires sentence-transformers).",
+    )
 
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
-        index = build_index(args.repo, output_path=args.output)
+        index = build_index(args.repo, output_path=args.output, embeddings=args.embeddings)
         n_symbols = len(index.symbols)
         n_sections = len(index.sections)
         n_links = len(index.links)
