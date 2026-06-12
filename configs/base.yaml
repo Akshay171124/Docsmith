@@ -38,6 +38,7 @@ triage:
 linking:
   embedding_model: "BAAI/bge-small-en-v1.5"
   embedding_similarity_threshold: 0.55   # recall layer; symbol-match is always primary
+  top_k: 5                          # max embedding-recall symbols linked per doc section
 
 # LLM.
 llm:
