@@ -115,6 +115,24 @@ merge, id normalization) are tested without any embedder at all.
 
 ---
 
+## 7a. Implementation notes (correctness details to nail in the plan)
+
+These are not scope items but subtleties that are easy to get wrong:
+
+- **Cosine semantics / threshold direction.** The Chroma collection MUST be created with
+  cosine space (`metadata={"hnsw:space": "cosine"}`). Chroma returns a *distance*, not a
+  similarity; convert with `similarity = 1 - distance` before comparing against
+  `embedding_similarity_threshold`. (Getting this backwards silently inverts recall.)
+- **Vector ids = entity ids.** Store each symbol's vector under its `Symbol.id` and each
+  section's under its `DocSection.id`, in two logical groups (separate collections or an
+  id/metadata convention). This is what makes per-file delete-on-change and mapping query
+  results back to entities possible.
+- **Graceful load of older indexes.** `load_index` must default `file_hashes` to `{}` when
+  the key is absent, so a Week-1 index (written before this field existed) still loads.
+- **bge prefix (tuning, optional).** bge-small documents an asymmetric query prefix; for
+  symmetric doc↔code matching we default to NO prefix. Noted as a tuning knob, not a
+  requirement — revisit only if recall quality is poor.
+
 ## 8. Components / Files
 
 | File | Change |
