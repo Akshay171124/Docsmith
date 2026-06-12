@@ -40,11 +40,15 @@ Goal: parse a repo into code symbols + doc sections, link them by name, persist 
 | 9 | Index builder — walk repo → parse → link | ✅ |
 | 10 | `build-index` CLI subcommand | ✅ |
 
-## Week 2 — Retrieval layer 🚧 (next)
+## Week 2 — Retrieval layer 🚧 (in progress)
 Local embeddings (bge-small) + Chroma, hybrid linking (symbol + embedding recall),
 incremental index updates, API-reference + config/CLI/env extractors.
 Carry-over from Week 1: normalize symbol/section ids to repo-relative paths (M1) and
 settle a stable id scheme before building incremental joins on top of it.
+
+| Task | Description | Status |
+|---|---|---|
+| 4 | Embedder seam (`Embedder` protocol, `FakeEmbedder`, `BgeSmallEmbedder`) | ✅ |
 
 ## Week 3 — Detection ⬜
 Diff parsing, symbol mapping for changed spans, triage filter, LLM staleness

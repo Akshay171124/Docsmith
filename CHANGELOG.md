@@ -7,6 +7,16 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Embedder seam (Week 2, Task 4)** — `src/index/embeddings.py`:
+  - `Embedder` — `typing.Protocol` (`@runtime_checkable`) defining `embed_texts`.
+  - `FakeEmbedder` — deterministic, offline 16-dim embedder seeded from SHA-256 digests;
+    produces L2-normalised unit vectors with no file/network I/O for use in all downstream
+    unit tests.
+  - `BgeSmallEmbedder` — production wrapper for `BAAI/bge-small-en-v1.5`; lazy-loads
+    `SentenceTransformer` on first call so importing the module never triggers a model
+    download.
+  - 7 new unit tests in `tests/unit/test_embeddings_embedder.py`; real-model tests
+    skip unless `DOCSMITH_RUN_MODEL_TESTS=1`.
 - **Index Core (Week 1)** — the deterministic, zero-LLM foundation:
   - Core data models: `Symbol`, `DocSection`, `Link`, `Index` (`src/models.py`).
   - Language registry with tree-sitter symbol queries for Python, TypeScript, JavaScript,
