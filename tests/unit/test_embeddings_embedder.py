@@ -70,7 +70,10 @@ class TestBgeSmallEmbedderLazyLoad:
     def test_construction_does_not_load_model(self) -> None:
         embedder = BgeSmallEmbedder()
         # The model attribute must not be set until first embed_texts call.
-        assert not hasattr(embedder, "_model") or embedder._model is None  # type: ignore[attr-defined]
+        assert embedder._model is None
+
+    def test_implements_embedder_protocol(self) -> None:
+        assert isinstance(BgeSmallEmbedder(), Embedder)
 
 
 # ---------------------------------------------------------------------------

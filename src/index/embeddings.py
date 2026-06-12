@@ -13,7 +13,10 @@ from __future__ import annotations
 import hashlib
 import math
 import random
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 DIM = 16  # Dimension used by FakeEmbedder
 
@@ -68,6 +71,8 @@ class BgeSmallEmbedder:
     call to ``embed_texts``; constructing an instance or importing this module
     never triggers a model download.
     """
+
+    _model: SentenceTransformer | None
 
     def __init__(self) -> None:
         self._model = None  # model is loaded on first embed_texts call
