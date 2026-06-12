@@ -102,8 +102,8 @@ def build_index(
             store and run embedding-based linking in addition to name matching.
             When False, only name-based linking is performed and no VectorStore
             is constructed.
-        full: When True and embeddings is True, reset the vector store before
-            adding new entries (forces a full re-embed).
+        full: Retained for CLI compatibility; no longer gates the store reset.
+            The vector store is always reset by build_index (see comment below).
         embedder: Embedder instance to use when embeddings is True.  Defaults
             to BgeSmallEmbedder() when None.  Intended as a test injection seam.
         top_k: Maximum number of symbol candidates to retrieve per section
@@ -140,10 +140,12 @@ def build_index(
             persist_dir = os.path.join(repo_root, ".docsmith", "chroma")
 
         store = VectorStore(emb, persist_dir)
-        if full:
-            store.reset()
+        # build_index is always a clean rebuild — never upsert onto stale vectors.
+        store.reset()
 
         store.add("symbol", [(s.id, _symbol_text(s), s.file) for s in symbols.values()])
+        # NOTE: section vectors are stored for a future stored-vector recall path;
+        # link_by_embedding currently re-embeds section text at query time.
         store.add("section", [(c.id, _section_text(c), c.file) for c in sections.values()])
 
         symbol_links = link_by_name(symbols, sections)

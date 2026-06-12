@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
+import shutil
 
 from src.index.builder import build_index
 from src.index.embeddings import FakeEmbedder
@@ -175,3 +177,67 @@ class TestBuildIndexNoEmbeddings:
 
         chroma_dir = tmp_path / "chroma"
         assert not chroma_dir.exists(), f"chroma dir was unexpectedly created at {chroma_dir}"
+
+
+class TestRebuildAfterLostIndex:
+    """Tests that build_index always produces a clean rebuild with no dangling links."""
+
+    def test_rebuild_after_lost_index_has_no_dangling_links(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Rebuild after lost index.json leaves no dangling embedding links.
+
+        Scenario:
+        1. First build with service.ts present — vectors land in chroma.
+        2. Delete service.ts AND index.json (simulating lost index but surviving chroma).
+        3. Rebuild (full=False) — without the fix, stale service.ts vectors survive in
+           chroma and link_by_embedding returns symbol_ids that no longer exist in the
+           freshly-built index (dangling links).  With the fix, the store is reset
+           unconditionally and no stale vectors remain.
+
+        threshold=0.0 ensures ANY surviving stale vector becomes a link, so the
+        pre-fix failure is guaranteed.
+        """
+        # Step 1: copy fixtures so we can mutate them safely.
+        tmp_repo = str(tmp_path / "repo")
+        shutil.copytree("tests/fixtures/sample_repo", tmp_repo)
+        idx = tmp_path / "index.json"
+
+        build_index(
+            tmp_repo,
+            output_path=str(idx),
+            embeddings=True,
+            embedder=FakeEmbedder(),
+            threshold=0.0,
+        )
+
+        # Step 2: simulate a lost index with surviving chroma data.
+        service_ts = os.path.join(tmp_repo, "service.ts")
+        os.remove(service_ts)
+        os.remove(str(idx))
+        # chroma/ directory is intentionally left in place.
+
+        # Step 3: rebuild without full=True.
+        index2 = build_index(
+            tmp_repo,
+            output_path=str(idx),
+            embeddings=True,
+            embedder=FakeEmbedder(),
+            threshold=0.0,
+        )
+
+        # Assert: no symbol from the deleted file appears in the rebuilt index.
+        for sym_id, sym in index2.symbols.items():
+            assert sym.file != "service.ts", (
+                f"Stale symbol {sym_id!r} from deleted service.ts found in rebuilt index"
+            )
+
+        # Assert: every link references ids that actually exist — no dangling links.
+        for link in index2.links:
+            assert link.symbol_id in index2.symbols, (
+                f"Dangling link: symbol_id {link.symbol_id!r} not in index2.symbols. "
+                f"This indicates stale vectors from service.ts survived the rebuild."
+            )
+            assert link.section_id in index2.sections, (
+                f"Dangling link: section_id {link.section_id!r} not in index2.sections."
+            )
