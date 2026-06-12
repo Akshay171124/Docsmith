@@ -11,11 +11,13 @@ _CLASS_TYPES = frozenset({"class_definition", "class_declaration", "type_declara
 _METHOD_TYPES = frozenset({"method_definition", "method_declaration"})
 
 
-def parse_file(path: str) -> list[Symbol]:
+def parse_file(path: str, rel_path: str | None = None) -> list[Symbol]:
     """Parse a source file and return all extracted symbols.
 
     Args:
-        path: Absolute or relative path to the source file.
+        path: Absolute or relative path to the source file (used for opening).
+        rel_path: Optional repo-relative path used for Symbol.id and Symbol.file.
+            When None, `path` is used for both opening and id/file fields.
 
     Returns:
         A list of Symbol objects for each definition found,
@@ -27,6 +29,8 @@ def parse_file(path: str) -> list[Symbol]:
 
     with open(path, "rb") as fh:
         source = fh.read()
+
+    id_path = rel_path or path
 
     tree = get_parser(language).parse(source)
     query = get_language(language).query(SYMBOL_QUERIES[language])
@@ -40,7 +44,7 @@ def parse_file(path: str) -> list[Symbol]:
         def_node = _smallest_containing_def(name_node, def_nodes)
         if def_node is None:
             continue
-        symbols.append(_build_symbol(path, language, source, def_node, name_node))
+        symbols.append(_build_symbol(id_path, language, source, def_node, name_node))
 
     return symbols
 

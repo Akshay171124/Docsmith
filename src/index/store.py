@@ -45,6 +45,7 @@ def save_index(index: Index, path: str) -> None:
         "symbols": {sid: dataclasses.asdict(sym) for sid, sym in index.symbols.items()},
         "sections": {sec_id: dataclasses.asdict(sec) for sec_id, sec in index.sections.items()},
         "links": [dataclasses.asdict(link) for link in index.links],
+        "file_hashes": index.file_hashes,
     }
 
     with open(path, "w", encoding="utf-8") as fh:
@@ -68,5 +69,6 @@ def load_index(path: str) -> Index:
     symbols = {sid: Symbol(**data) for sid, data in payload["symbols"].items()}
     sections = {sec_id: _section_from_dict(data) for sec_id, data in payload["sections"].items()}
     links = [Link(**data) for data in payload["links"]]
+    file_hashes: dict[str, str] = payload.get("file_hashes", {})
 
-    return Index(symbols=symbols, sections=sections, links=links)
+    return Index(symbols=symbols, sections=sections, links=links, file_hashes=file_hashes)

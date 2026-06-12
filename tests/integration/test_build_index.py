@@ -13,7 +13,7 @@ FIXTURE_REPO = "tests/fixtures/sample_repo"
 
 def test_build_index_symbols_and_sections() -> None:
     """build_index collects expected symbols and the Users section, and links them."""
-    index = build_index(FIXTURE_REPO)
+    index = build_index(FIXTURE_REPO, embeddings=False)
 
     symbol_names = {sym.name for sym in index.symbols.values()}
     expected_symbols = {"create_user", "UserService", "deactivate", "formatName", "Cache"}
@@ -37,7 +37,7 @@ def test_build_index_symbols_and_sections() -> None:
 
 def test_indexed_symbols_have_supported_language() -> None:
     """Every symbol's source file maps to a supported language."""
-    index = build_index(FIXTURE_REPO)
+    index = build_index(FIXTURE_REPO, embeddings=False)
     for sym in index.symbols.values():
         assert language_for_path(sym.file) is not None, (
             f"Symbol {sym.id!r} from unsupported file {sym.file!r}"
@@ -47,7 +47,7 @@ def test_indexed_symbols_have_supported_language() -> None:
 def test_build_index_writes_output_file(tmp_path: pathlib.Path) -> None:
     """build_index writes index.json when output_path is given and returns a non-empty Index."""
     output = tmp_path / "index.json"
-    index = build_index(FIXTURE_REPO, output_path=str(output))
+    index = build_index(FIXTURE_REPO, output_path=str(output), embeddings=False)
 
     assert output.exists(), "index.json was not written"
     assert index.symbols or index.sections, "Returned index is empty"
@@ -58,7 +58,7 @@ def test_symbol_id_collision_both_survive(tmp_path: pathlib.Path) -> None:
     py_file = tmp_path / "dup.py"
     py_file.write_text("def foo(): pass\n\ndef foo(): pass\n")
 
-    index = build_index(str(tmp_path))
+    index = build_index(str(tmp_path), embeddings=False)
 
     foo_symbols = [s for s in index.symbols.values() if s.name == "foo"]
     assert len(foo_symbols) == 2, (
@@ -80,7 +80,7 @@ def test_duplicate_heading_sections_both_survive(tmp_path: pathlib.Path) -> None
         "## Examples\n\nFirst example body.\n\n## Examples\n\nSecond example body.\n"
     )
 
-    index = build_index(str(tmp_path))
+    index = build_index(str(tmp_path), embeddings=False)
 
     examples_sections = [
         s for s in index.sections.values() if s.heading_path == ("Examples",)
@@ -104,7 +104,7 @@ def test_skip_dirs_prunes_venv(tmp_path: pathlib.Path) -> None:
     (venv_dir / "junk.py").write_text("def should_be_skipped(): pass\n")
     (tmp_path / "real.py").write_text("def real_fn(): pass\n")
 
-    index = build_index(str(tmp_path))
+    index = build_index(str(tmp_path), embeddings=False)
 
     symbol_names = {s.name for s in index.symbols.values()}
     assert "real_fn" in symbol_names, "'real_fn' from real.py was not indexed"
@@ -118,7 +118,7 @@ def test_empty_repo_returns_empty_index(tmp_path: pathlib.Path) -> None:
     empty_dir = tmp_path / "empty_repo"
     empty_dir.mkdir()
 
-    index = build_index(str(empty_dir))
+    index = build_index(str(empty_dir), embeddings=False)
 
     assert index.symbols == {}, f"Expected no symbols, got {index.symbols}"
     assert index.sections == {}, f"Expected no sections, got {index.sections}"
@@ -131,7 +131,7 @@ def test_empty_repo_writes_loadable_file(tmp_path: pathlib.Path) -> None:
     empty_dir.mkdir()
     output = tmp_path / "i.json"
 
-    build_index(str(empty_dir), output_path=str(output))
+    build_index(str(empty_dir), output_path=str(output), embeddings=False)
 
     assert output.exists(), "Output file was not written for empty repo"
     data = json.loads(output.read_text())

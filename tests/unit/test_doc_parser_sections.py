@@ -35,3 +35,12 @@ def test_users_section_properties():
     assert users.start_line < users.end_line
     assert users.file.endswith("README.md")
     assert users.id == "tests/fixtures/sample_repo/README.md#users"
+
+
+def test_users_section_rel_path_id_and_file():
+    """When rel_path is given, Users section id and file reflect rel_path."""
+    sections = parse_markdown(str(FIXTURE), rel_path="README.md")
+    users = _section_by_heading(sections, ("Users",))
+    assert users is not None, "Expected a section with heading_path ('Users',)"
+    assert users.id == "README.md#users"
+    assert users.file == "README.md"
