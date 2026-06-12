@@ -101,3 +101,10 @@ def test_reset_clears_all_data(store):
     store.reset()
     results = store.query("foo bar baz", "symbol", top_k=5)
     assert results == []
+
+
+def test_top_k_zero_returns_empty_list(store):
+    """query() with top_k=0 must return an empty list without hitting Chroma."""
+    store.add("symbol", SYMBOL_ITEMS)
+    results = store.query("foo bar baz", "symbol", top_k=0)
+    assert results == []

@@ -191,22 +191,16 @@ class VectorStore:
             perfect match yields ``1.0``.  Returns ``[]`` when the
             collection is empty or no results match the filter.
         """
-        if self._collection.count() == 0:
+        if top_k <= 0:
             return []
 
         query_embedding = self._embedder.embed_texts([query_text])[0]
 
-        try:
-            result = self._collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k,
-                where={"group": group},
-            )
-        except Exception:
-            # Chroma raises if n_results > number of items in the filtered set;
-            # in that case return whatever results are available by catching and
-            # retrying with a smaller n_results, or simply return empty.
-            return []
+        result = self._collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            where={"group": group},
+        )
 
         ids_nested = result.get("ids") or []
         distances_nested = result.get("distances") or []
