@@ -8,8 +8,9 @@ Single CLI entry usable both locally and inside the GitHub Action:
 from __future__ import annotations
 
 import argparse
+import os
 
-from src.index.builder import build_index
+from src.index.builder import build_index, update_index
 
 
 def main() -> None:
@@ -35,16 +36,33 @@ def main() -> None:
         help="Path to write the index JSON (default: .docsmith/index.json).",
     )
     build_parser.add_argument(
-        "--embeddings",
+        "--full",
         action="store_true",
-        default=False,
-        help="Enable hybrid embedding-based linking (requires sentence-transformers).",
+        help="Force a full rebuild even if an existing index is found.",
+    )
+    build_parser.add_argument(
+        "--no-embeddings",
+        action="store_true",
+        dest="no_embeddings",
+        help="Disable hybrid embedding-based linking (symbol-match only, no model required).",
     )
 
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
-        index = build_index(args.repo, output_path=args.output, embeddings=args.embeddings)
+        embeddings = not args.no_embeddings
+        index_exists = os.path.exists(args.output)
+
+        if args.full or not index_exists:
+            index = build_index(
+                args.repo,
+                output_path=args.output,
+                embeddings=embeddings,
+                full=args.full,
+            )
+        else:
+            index = update_index(args.repo, args.output, embeddings=embeddings)
+
         n_symbols = len(index.symbols)
         n_sections = len(index.sections)
         n_links = len(index.links)
