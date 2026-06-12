@@ -36,12 +36,20 @@ def test_symbol_fields_and_hashable():
 
 
 def test_empty_index_defaults():
-    """An empty Index() has empty symbols, sections, and links collections."""
+    """An empty Index() has empty symbols, sections, links, and file_hashes collections."""
     idx = Index()
 
     assert idx.symbols == {}
     assert idx.sections == {}
     assert idx.links == []
+    assert idx.file_hashes == {}
+
+
+def test_index_file_hashes_field():
+    """Index accepts and exposes a non-empty file_hashes mapping."""
+    idx = Index(file_hashes={"app.py": "abc"})
+
+    assert idx.file_hashes == {"app.py": "abc"}
 
 
 def test_doc_section_fields_and_hashable():
