@@ -68,9 +68,12 @@ class Link:
 class Index:
     """The in-memory index mapping symbols and doc sections with their links.
 
-    All three collections default to empty so ``Index()`` is always safe to construct.
+    All four collections default to empty so ``Index()`` is always safe to construct.
+    ``file_hashes`` maps repo-relative file paths to their hex sha256 digests and
+    is used by the builder to detect changed files on incremental updates.
     """
 
     symbols: dict[str, Symbol] = field(default_factory=dict)
     sections: dict[str, DocSection] = field(default_factory=dict)
     links: list[Link] = field(default_factory=list)
+    file_hashes: dict[str, str] = field(default_factory=dict)

@@ -44,3 +44,22 @@ class TestParseFilePython:
         """parse_file returns [] for a file with an unsupported extension."""
         result = parse_file("some_file.txt")
         assert result == []
+
+
+class TestParseFileRelPath:
+    """Tests for parse_file with an explicit rel_path override."""
+
+    def test_create_user_id_and_file_use_rel_path(self):
+        """When rel_path is given, create_user symbol id and file reflect rel_path."""
+        symbols = parse_file(str(FIXTURE / "app.py"), rel_path="app.py")
+        by_name = {s.name: s for s in symbols}
+        sym = by_name["create_user"]
+        assert sym.id == "app.py::create_user"
+        assert sym.file == "app.py"
+
+    def test_deactivate_id_uses_rel_path(self):
+        """When rel_path is given, UserService.deactivate id reflects rel_path."""
+        symbols = parse_file(str(FIXTURE / "app.py"), rel_path="app.py")
+        matching = [s for s in symbols if s.qualified_name == "UserService.deactivate"]
+        assert len(matching) == 1
+        assert matching[0].id == "app.py::UserService.deactivate"

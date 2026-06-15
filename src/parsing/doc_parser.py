@@ -64,20 +64,24 @@ def _extract_references(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     return tuple(symbols), tuple(config_keys)
 
 
-def parse_markdown(path: str) -> list[DocSection]:
+def parse_markdown(path: str, rel_path: str | None = None) -> list[DocSection]:
     """Parse a markdown file into heading-delimited DocSection objects.
 
     Content before the first heading is ignored. Each heading starts a new section
     that runs up to (but not including) the next heading, or to the end of file.
 
     Args:
-        path: Filesystem path to the markdown file.
+        path: Filesystem path to the markdown file (used for opening).
+        rel_path: Optional repo-relative path used for DocSection.id and DocSection.file.
+            When None, `path` is used for both opening and id/file fields.
 
     Returns:
         A list of DocSection objects, one per ATX heading found in the file.
     """
     with open(path, encoding="utf-8") as fh:
         lines = fh.readlines()
+
+    id_path = rel_path or path
 
     # Collect (1-based line number, heading text) for every ATX heading
     headings: list[tuple[int, str]] = []
@@ -105,9 +109,9 @@ def parse_markdown(path: str) -> list[DocSection]:
 
         sections.append(
             DocSection(
-                id=f"{path}#{_slug(heading_text)}",
+                id=f"{id_path}#{_slug(heading_text)}",
                 heading_path=(heading_text,),
-                file=path,
+                file=id_path,
                 raw=raw,
                 start_line=heading_lineno,
                 end_line=end_lineno,

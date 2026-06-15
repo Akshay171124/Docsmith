@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -111,3 +112,40 @@ def test_save_creates_parent_directories(tmp_path):
     save_index(_make_index(), nested_path)
 
     assert os.path.isfile(nested_path), "index.json was not created at the nested path"
+
+
+# ---------------------------------------------------------------------------
+# Test 3: file_hashes round-trip
+# ---------------------------------------------------------------------------
+
+
+def test_file_hashes_round_trip(tmp_path):
+    """file_hashes are preserved exactly through a save/load cycle."""
+    path = str(tmp_path / "index.json")
+    original = Index(
+        symbols={SYMBOL.id: SYMBOL},
+        file_hashes={"app.py": "deadbeef"},
+    )
+
+    save_index(original, path)
+    loaded = load_index(path)
+
+    assert loaded.file_hashes == {"app.py": "deadbeef"}
+
+
+# ---------------------------------------------------------------------------
+# Test 4: backward compatibility — JSON without file_hashes key
+# ---------------------------------------------------------------------------
+
+
+def test_load_index_backward_compat_no_file_hashes(tmp_path):
+    """A JSON file written without a file_hashes key loads without error and defaults to {}."""
+    path = str(tmp_path / "old_index.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump({"symbols": {}, "sections": {}, "links": []}, fh)
+
+    loaded = load_index(path)
+
+    assert loaded.file_hashes == {}
+    assert loaded.symbols == {}
+    assert loaded.links == []
