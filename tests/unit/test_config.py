@@ -43,6 +43,28 @@ class TestLoadSettingsMissingKeys:
         # Should not raise
         load_settings(path=str(minimal))
 
+    def test_null_values_default_to_empty_and_true(self, tmp_path):
+        null_yaml = tmp_path / "null_values.yaml"
+        null_yaml.write_text(
+            "triage:\n"
+            "  ignore_paths:\n"
+            "  skip_comment_only:\n"
+            "  skip_whitespace_only:\n"
+            "docs:\n"
+            "  ignore:\n"
+        )
+        s = load_settings(path=str(null_yaml))
+        assert s.ignore_paths == []
+        assert s.doc_ignore == []
+        assert s.skip_comment_only is True
+        assert s.skip_whitespace_only is True
+
+    def test_explicit_false_is_preserved(self, tmp_path):
+        false_yaml = tmp_path / "false_values.yaml"
+        false_yaml.write_text("triage:\n  skip_comment_only: false\n")
+        s = load_settings(path=str(false_yaml))
+        assert s.skip_comment_only is False
+
 
 class TestLoadSettingsOverrides:
     """Tests for the overrides parameter."""

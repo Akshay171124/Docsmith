@@ -50,11 +50,19 @@ def load_settings(
     triage = raw.get("triage") or {}
     docs = raw.get("docs") or {}
 
+    skip_comment_only = triage.get("skip_comment_only", True)
+    if skip_comment_only is None:
+        skip_comment_only = True
+
+    skip_whitespace_only = triage.get("skip_whitespace_only", True)
+    if skip_whitespace_only is None:
+        skip_whitespace_only = True
+
     settings = Settings(
-        ignore_paths=triage.get("ignore_paths", []),
-        doc_ignore=docs.get("ignore", []),
-        skip_comment_only=triage.get("skip_comment_only", True),
-        skip_whitespace_only=triage.get("skip_whitespace_only", True),
+        ignore_paths=triage.get("ignore_paths") or [],
+        doc_ignore=docs.get("ignore") or [],
+        skip_comment_only=skip_comment_only,
+        skip_whitespace_only=skip_whitespace_only,
     )
 
     if overrides:
