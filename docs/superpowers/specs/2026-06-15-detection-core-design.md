@@ -91,9 +91,17 @@ DetectionResult(changed_symbols, suspects, dropped)
 
 ### 4.3 SymbolMapper (`src/detection/symbol_mapper.py`)
 - `map_changes(file_changes: list[FileChange]) -> list[ChangedSymbol]`.
+- **Prerequisite — content-based parsing.** `parse_file(path)` reads from disk, but the
+  mapper has in-memory `old_content`/`new_content` strings (from `git show`), not paths.
+  So `src/parsing/code_parser.py` is refactored to expose
+  `parse_source(source: str | bytes, rel_path: str, language: str) -> list[Symbol]`, and
+  `parse_file` becomes a thin wrapper that reads the file, resolves the language, and
+  delegates to `parse_source`. This is behavior-preserving for existing `parse_file`
+  callers (Week-1/2 tests must stay green).
 - For each code `FileChange` (skip `.md` — those are doc changes, handled elsewhere):
-  parse `old_content` and `new_content` with the existing `parse_file` (passing
-  `rel_path`), giving old/new symbol sets keyed by `qualified_name`.
+  parse `old_content` and `new_content` via `parse_source` (language from
+  `language_for_path(path)`, `rel_path = path`), giving old/new symbol sets keyed by
+  `qualified_name`.
   - **added**: qn in new not old, and the symbol overlaps `changed_lines`.
   - **removed**: qn in old not new.
   - in both: **signature_changed** if the signature line differs; else **body_changed**
@@ -105,9 +113,14 @@ DetectionResult(changed_symbols, suspects, dropped)
 - Drops, per settings:
   - files whose path matches `triage.ignore_paths` or `docs.ignore` globs;
   - test files (same `ignore_paths` patterns, e.g. `**/test_*.py`, `**/*.test.ts`);
-  - comment-only / whitespace-only changes when `skip_comment_only` / `skip_whitespace_only`
-    are set — determined from the `FileChange` diff (a `body_changed` symbol whose only
-    changed lines are comments/blank is dropped).
+  - **whitespace-only** changes when `skip_whitespace_only` is set — exact: a
+    `body_changed` symbol whose changed new-lines are all blank/whitespace is dropped.
+  - **comment-only** changes when `skip_comment_only` is set — **heuristic**: a per-language
+    line-prefix check (`#` for Python, `//` for TS/JS/Go) over the changed new-lines; if
+    every changed line is blank or a comment line, drop. Comment markers come from a small
+    per-language map in the triage module. This is best-effort (it won't catch block
+    comments or trailing inline comments); the LLM investigator is the final arbiter later,
+    so a missed drop only means an extra suspect, never a wrong verdict.
 - Returns the surviving `ChangedSymbol`s plus a `dropped` counter dict. Logs the drops.
 - Operates at the symbol level (it receives both the `ChangedSymbol`s and their owning
   `FileChange`s so it can inspect the changed lines).
@@ -174,6 +187,7 @@ DetectionResult(changed_symbols, suspects, dropped)
 | `git show` for added/deleted files (one side absent) errors | Detect add/delete from the diff; pass `old_content=None`/`new_content=None` accordingly; never `git show` a missing side. |
 | Symbol mapping false "body_changed" from reformatting | Triage's whitespace/comment-only drop; signature comparison is line-based. Good-enough for the deterministic stage; the LLM investigator is the final arbiter later. |
 | Index is stale relative to head (built earlier) | Detection treats the index as the link source; `name-reference` matching backstops missing links. Index freshness is a Week-5 (Action) concern. |
+| Path-form mismatch between git adapter output and index ids (`app.py` vs `./app.py`) silently breaks index-link matching | Normalize git-adapter paths with the same convention the index builder uses (`os.path.relpath`-style, no `./` prefix); a candidate-linker test asserts an index built on a repo and a `ChangedSymbol` for the same file produce a matching `index-link` suspect. Name-reference matching is the backstop if it still drifts. |
 | Rename detection | Modeled as removed + added (git rename detection not relied upon); the name-reference path flags docs mentioning the old name. |
 | `unidiff` parsing edge cases (binary, mode-only) | Skip non-text / no-hunk files; only emit `changed_lines` for text hunks. |
 
