@@ -63,9 +63,11 @@ DetectionResult(changed_symbols, suspects, dropped)
   added), `new_content: str | None` (None if deleted), `changed_lines: frozenset[int]`
   (new-file line numbers touched; empty for a pure deletion).
 - **`ChangedSymbol`** (frozen): `id: str`, `name: str`, `qualified_name: str`, `file: str`,
-  `kind: ChangeKind`, `old_signature: str | None`, `new_signature: str | None`. The
-  `SymbolMapper` sets `id = f"{file}::{qualified_name}"` so it matches the index's
-  repo-relative `Symbol.id` scheme (Week 1/2), enabling direct `index.links` matching.
+  `kind: ChangeKind`, `start_line: int`, `end_line: int` (new-side span; old-side for
+  `REMOVED`), `old_signature: str | None`, `new_signature: str | None`. The `SymbolMapper`
+  sets `id = f"{file}::{qualified_name}"` so it matches the index's repo-relative
+  `Symbol.id` scheme (Week 1/2), enabling direct `index.links` matching. The line span lets
+  triage inspect which changed lines fall inside the symbol.
 - **`Suspect`** (frozen): `symbol_id: str` (the changed symbol's repo-relative id),
   `section_id: str`, `change_kind: ChangeKind`, `via: str` (`"index-link"` | `"name-reference"`).
 - **`DetectionResult`**: `changed_symbols: list[ChangedSymbol]`, `suspects: list[Suspect]`,
