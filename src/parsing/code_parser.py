@@ -30,7 +30,26 @@ def parse_file(path: str, rel_path: str | None = None) -> list[Symbol]:
     with open(path, "rb") as fh:
         source = fh.read()
 
-    id_path = rel_path or path
+    return parse_source(source, rel_path or path, language)
+
+
+def parse_source(source: str | bytes, rel_path: str, language: str) -> list[Symbol]:
+    """Parse in-memory source content and return all extracted symbols.
+
+    Does no disk access; assumes `language` is a valid supported tree-sitter
+    language name (the caller is responsible for resolving it, e.g. via
+    `language_for_path`).
+
+    Args:
+        source: Source code content, as a str or raw bytes.
+        rel_path: Path used for Symbol.id and Symbol.file.
+        language: Tree-sitter language name (must be a key in SYMBOL_QUERIES).
+
+    Returns:
+        A list of Symbol objects for each definition found.
+    """
+    if isinstance(source, str):
+        source = source.encode("utf-8")
 
     tree = get_parser(language).parse(source)
     query = get_language(language).query(SYMBOL_QUERIES[language])
@@ -44,7 +63,7 @@ def parse_file(path: str, rel_path: str | None = None) -> list[Symbol]:
         def_node = _smallest_containing_def(name_node, def_nodes)
         if def_node is None:
             continue
-        symbols.append(_build_symbol(id_path, language, source, def_node, name_node))
+        symbols.append(_build_symbol(rel_path, language, source, def_node, name_node))
 
     return symbols
 
