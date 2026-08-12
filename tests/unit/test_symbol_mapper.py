@@ -129,6 +129,31 @@ def test_rename_is_removed_plus_added():
     assert qualified_names["new_name"].kind == ChangeKind.ADDED
 
 
+def test_results_are_deterministically_ordered():
+    new_content = (
+        "def zeta():\n"
+        "    return 1\n"
+        "\n\n"
+        "def alpha():\n"
+        "    return 2\n"
+        "\n\n"
+        "def mango():\n"
+        "    return 3\n"
+    )
+    fc = FileChange(
+        path="m.py",
+        old_content=None,
+        new_content=new_content,
+        changed_lines=frozenset(range(1, new_content.count("\n") + 1)),
+    )
+
+    result = map_changes([fc])
+
+    qualified_names = [cs.qualified_name for cs in result]
+    assert qualified_names == sorted(cs.qualified_name for cs in result)
+    assert qualified_names == ["alpha", "mango", "zeta"]
+
+
 def test_md_file_skipped():
     fc = FileChange(
         path="README.md",

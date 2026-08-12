@@ -40,7 +40,7 @@ def map_changes(file_changes: list[FileChange]) -> list[ChangedSymbol]:
             else {}
         )
 
-        for qualified_name in old.keys() | new.keys():
+        for qualified_name in sorted(old.keys() | new.keys()):
             old_sym = old.get(qualified_name)
             new_sym = new.get(qualified_name)
 
