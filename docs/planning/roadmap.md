@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Weeks 1–2 complete ✅ — next up is Week 3 (Detection). Pending sub-project: the API-reference + config/CLI/env doc extractors deferred from Week 2.
+**Current focus:** Weeks 1–3 complete ✅ — next up is the **LLM staleness investigator** (deferred from Week 3, the first Claude integration). Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
 
 ---
 
@@ -66,9 +66,36 @@ resolved here.
 instead of re-embedding at query time; wire `configs/base.yaml` `linking.*` into the
 builder/CLI (currently hardcoded defaults match the config).
 
-## Week 3 — Detection ⬜
-Diff parsing, symbol mapping for changed spans, triage filter, LLM staleness
-investigator with read/grep tools.
+## Week 3 — Detection Core ✅
+Scoped to the **deterministic** detection pipeline (the LLM staleness investigator was
+split out into its own next sub-project). Spec:
+[2026-06-15-detection-core-design.md](../superpowers/specs/2026-06-15-detection-core-design.md);
+plan: [2026-06-15-detection-core.md](../superpowers/plans/2026-06-15-detection-core.md).
+**Done:** 160 tests passing (offline). Pipeline: git adapter → diff parser → symbol mapper
+(add/remove/signature/body classification) → triage → candidate linker (index-link +
+name-reference) → `detect` CLI. Also added a minimal config loader (clears a Week-2 follow-up).
+
+| Task | Description | Status |
+|---|---|---|
+| 0 | Minimal config loader (`src/utils/config.py`) | ✅ |
+| 1 | Detection data models (`src/detection/models.py`) | ✅ |
+| 2 | Content-based `parse_source` refactor | ✅ |
+| 3 | Diff parser (unified diff → changed lines) | ✅ |
+| 4 | Git adapter (`collect_changes`) | ✅ |
+| 5 | Symbol mapper (classify changed symbols) | ✅ |
+| 6 | Triage filter (drop noise) | ✅ |
+| 7 | Candidate linker (suspects from index) | ✅ |
+| 8 | Detector orchestrator (`detect`) | ✅ |
+| 9 | `detect` CLI subcommand | ✅ |
+
+**Known follow-ups (from review):** pure-deletion body changes aren't detected (new-file
+line-number heuristic); non-ASCII filenames (git `quotepath`); candidate linker is O(n×m)
+at scale; CLI loads the index twice. None blocking.
+
+## Next sub-project — LLM Staleness Investigator ⬜ (first Claude integration)
+Given the detector's suspect sections, an LLM (Claude) judges whether each is actually
+stale (old code + new code + doc section → verdict + diagnosis), behind a client seam with
+a fake for offline tests. This is stage 5 of the original pipeline.
 
 ## Week 4 — Repair ⬜
 Targeted repair, validation pass, confidence router; structured outputs end-to-end.
