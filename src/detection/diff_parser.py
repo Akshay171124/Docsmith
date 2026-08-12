@@ -8,10 +8,10 @@ from unidiff import PatchSet
 def parse_unified_diff(diff_text: str) -> dict[str, frozenset[int]]:
     """Parse a unified diff into added new-file line numbers per file.
 
-    Each patched file is keyed by its **target (new) path** for additions and
-    modifications, since those are the line numbers callers care about. A file
-    that is purely a deletion (no added lines, including fully deleted files)
-    is instead keyed by its **source (old) path** — the target path is
+    Each patched file is keyed by its **target (new) path** for additions,
+    modifications, and renames, since those are the line numbers callers care
+    about. A file that is actually removed (`patched_file.is_removed_file`) is
+    instead keyed by its **source (old) path** — the target path is
     `/dev/null` and can't identify the file — and maps to an empty frozenset.
 
     Files with no hunks (e.g. binary or mode-only changes) are skipped
@@ -38,7 +38,11 @@ def parse_unified_diff(diff_text: str) -> dict[str, frozenset[int]]:
             if line.is_added
         }
 
-        key = patched_file.source_file.removeprefix("a/") if not added_lines else patched_file.path
+        key = (
+            patched_file.source_file.removeprefix("a/")
+            if patched_file.is_removed_file
+            else patched_file.path
+        )
         result[key] = frozenset(added_lines)
 
     return result

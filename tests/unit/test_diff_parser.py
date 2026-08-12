@@ -96,6 +96,24 @@ def test_pure_deletion_file_maps_to_empty_frozenset():
     assert result == {"old.py": frozenset()}
 
 
+def test_rename_with_deletion_only_keys_new_path():
+    diff = """\
+diff --git a/old.py b/new.py
+similarity index 90%
+rename from old.py
+rename to new.py
+--- a/old.py
++++ b/new.py
+@@ -1,3 +1,2 @@
+ def foo():
+-    x = 1
+     return foo
+"""
+    result = parse_unified_diff(diff)
+
+    assert result == {"new.py": frozenset()}
+
+
 def test_skips_files_with_no_hunks():
     diff = """\
 diff --git a/img.png b/img.png
