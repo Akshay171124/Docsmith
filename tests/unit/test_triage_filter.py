@@ -141,3 +141,28 @@ class TestNonBodyKindsAlwaysKept:
 
         assert kept == [symbol]
         assert dropped == {}
+
+    def test_body_changed_with_no_in_span_lines_is_kept(self):
+        symbol = ChangedSymbol(
+            id="m.py::foo",
+            name="foo",
+            qualified_name="foo",
+            file="m.py",
+            kind=ChangeKind.BODY_CHANGED,
+            start_line=2,
+            end_line=4,
+            old_signature="def foo():",
+            new_signature="def foo():",
+        )
+        fc = FileChange(
+            path="m.py",
+            old_content="a\nb\nc\n",
+            new_content="a\nb\nc\nd\n",
+            changed_lines=frozenset({10, 11}),
+        )
+        settings = _settings()
+
+        kept, dropped = triage([symbol], [fc], settings)
+
+        assert kept == [symbol]
+        assert dropped == {}
