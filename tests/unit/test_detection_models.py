@@ -5,7 +5,10 @@ from src.detection.models import (
     ChangeKind,
     DetectionResult,
     FileChange,
+    InvestigationInput,
+    InvestigationResult,
     Suspect,
+    Verdict,
 )
 
 
@@ -72,3 +75,49 @@ def test_detection_result_defaults() -> None:
 def test_change_kind_members() -> None:
     members = {m.name for m in ChangeKind}
     assert members == {"ADDED", "REMOVED", "SIGNATURE_CHANGED", "BODY_CHANGED"}
+
+
+def test_verdict_fields_and_hashable() -> None:
+    verdict = Verdict(
+        symbol_id="app.py::create_user",
+        section_id="README.md#users",
+        stale=True,
+        confidence=0.9,
+        reason="Doc still shows the old signature.",
+        wrong_claims=("takes 1 arg",),
+    )
+    assert verdict.symbol_id == "app.py::create_user"
+    assert verdict.section_id == "README.md#users"
+    assert verdict.stale is True
+    assert verdict.confidence == 0.9
+    assert verdict.reason == "Doc still shows the old signature."
+    assert verdict.wrong_claims == ("takes 1 arg",)
+    # frozen dataclass must be hashable
+    assert verdict in {verdict}
+
+
+def test_investigation_input_fields_with_none_old_code() -> None:
+    inv_input = InvestigationInput(
+        symbol_id="app.py::create_user",
+        section_id="README.md#users",
+        change_kind=ChangeKind.ADDED,
+        symbol_name="create_user",
+        old_code=None,
+        new_code="def create_user(name, email): ...",
+        doc_section_text="## Users\nThis section describes user management.",
+    )
+    assert inv_input.symbol_id == "app.py::create_user"
+    assert inv_input.section_id == "README.md#users"
+    assert inv_input.change_kind == ChangeKind.ADDED
+    assert inv_input.symbol_name == "create_user"
+    assert inv_input.old_code is None
+    assert inv_input.new_code == "def create_user(name, email): ..."
+    assert inv_input.doc_section_text == "## Users\nThis section describes user management."
+    # frozen dataclass must be hashable
+    assert inv_input in {inv_input}
+
+
+def test_investigation_result_defaults() -> None:
+    result = InvestigationResult()
+    assert result.verdicts == []
+    assert result.skipped == {}
