@@ -17,12 +17,20 @@ class Settings:
         doc_ignore: Glob patterns for doc files to exclude from monitoring.
         skip_comment_only: Drop diff hunks that contain only comment changes.
         skip_whitespace_only: Drop diff hunks that contain only whitespace changes.
+        llm_backend: Which LLM backend the investigator uses (`fake`, `ollama`, `claude`).
+        ollama_model: Model name to request from the Ollama backend.
+        ollama_host: Base URL of the Ollama server.
+        claude_model: Model name to request from the Claude backend.
     """
 
     ignore_paths: list[str] = field(default_factory=list)
     doc_ignore: list[str] = field(default_factory=list)
     skip_comment_only: bool = True
     skip_whitespace_only: bool = True
+    llm_backend: str = "ollama"
+    ollama_model: str = "qwen2.5-coder:7b"
+    ollama_host: str = "http://localhost:11434"
+    claude_model: str = "claude-sonnet-5"
 
 
 def load_settings(
@@ -49,6 +57,7 @@ def load_settings(
 
     triage = raw.get("triage") or {}
     docs = raw.get("docs") or {}
+    llm = raw.get("llm") or {}
 
     skip_comment_only = triage.get("skip_comment_only", True)
     if skip_comment_only is None:
@@ -63,6 +72,10 @@ def load_settings(
         doc_ignore=docs.get("ignore") or [],
         skip_comment_only=skip_comment_only,
         skip_whitespace_only=skip_whitespace_only,
+        llm_backend=llm.get("backend") or "ollama",
+        ollama_model=llm.get("ollama_model") or "qwen2.5-coder:7b",
+        ollama_host=llm.get("ollama_host") or "http://localhost:11434",
+        claude_model=llm.get("claude_model") or "claude-sonnet-5",
     )
 
     if overrides:
