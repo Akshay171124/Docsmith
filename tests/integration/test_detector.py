@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from src.detection.detector import detect
+from src.detection.detector import detect, run_detection
 from src.detection.models import ChangeKind
 from src.index.builder import build_index
 from src.utils.config import load_settings
@@ -124,3 +124,28 @@ def test_detect_drops_whitespace_only_change(tmp_path):
 
     assert not any(s.name == "helper" for s in result.changed_symbols)
     assert result.dropped.get("whitespace_only", 0) >= 1
+
+
+def test_run_detection_returns_result_and_file_changes(tmp_path):
+    repo, base_sha = _init_repo(tmp_path)
+
+    (repo / "app.py").write_text(APP_PY_HEAD_SIGNATURE_ONLY)
+    head_sha = _commit(repo, "change create_user signature")
+
+    index_path = repo / ".docsmith" / "index.json"
+    build_index(str(repo), output_path=str(index_path), embeddings=False)
+
+    settings = load_settings()
+    detect_result = detect(str(repo), base_sha, head_sha, str(index_path), settings)
+    result, file_changes = run_detection(str(repo), base_sha, head_sha, str(index_path), settings)
+
+    assert isinstance(file_changes, list)
+    assert result.changed_symbols == detect_result.changed_symbols
+    assert result.suspects == detect_result.suspects
+    assert result.dropped == detect_result.dropped
+
+    assert file_changes, "expected at least one FileChange"
+    app_py_changes = [fc for fc in file_changes if fc.path == "app.py"]
+    assert len(app_py_changes) == 1
+    assert app_py_changes[0].old_content is not None
+    assert app_py_changes[0].new_content is not None

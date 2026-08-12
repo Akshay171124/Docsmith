@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from src.detection.candidate_linker import find_suspects
 from src.detection.git_adapter import collect_changes
-from src.detection.models import DetectionResult
+from src.detection.models import DetectionResult, FileChange
 from src.detection.symbol_mapper import map_changes
 from src.detection.triage_filter import triage
 from src.index.store import load_index
 from src.utils.config import Settings
 
 
-def detect(
+def run_detection(
     repo_root: str, base: str, head: str, index_path: str, settings: Settings
-) -> DetectionResult:
+) -> tuple[DetectionResult, list[FileChange]]:
     """Run the full deterministic detection pipeline for a base/head diff.
 
     Composes the existing detection stages: collects file-level changes from git,
@@ -28,9 +28,10 @@ def detect(
         settings: Triage configuration.
 
     Returns:
-        A DetectionResult with the triaged changed symbols, linked suspects, and
-        drop counts keyed by reason (including ``"no_candidates"`` for symbols
-        that survived triage but produced no suspects).
+        A tuple of the DetectionResult (triaged changed symbols, linked suspects,
+        and drop counts keyed by reason, including ``"no_candidates"`` for symbols
+        that survived triage but produced no suspects) and the list of raw
+        FileChanges collected from git for this diff.
     """
     file_changes = collect_changes(repo_root, base, head)
     changed_symbols = map_changes(file_changes)
@@ -44,4 +45,29 @@ def detect(
     if no_candidates > 0:
         dropped["no_candidates"] = no_candidates
 
-    return DetectionResult(changed_symbols=kept, suspects=suspects, dropped=dropped)
+    result = DetectionResult(changed_symbols=kept, suspects=suspects, dropped=dropped)
+    return result, file_changes
+
+
+def detect(
+    repo_root: str, base: str, head: str, index_path: str, settings: Settings
+) -> DetectionResult:
+    """Run the full deterministic detection pipeline for a base/head diff.
+
+    Thin wrapper around ``run_detection`` for callers that only need the
+    DetectionResult (e.g. the read-only CLI path).
+
+    Args:
+        repo_root: Path to the git working tree.
+        base: Base ref (old revision).
+        head: Head ref (new revision).
+        index_path: Filesystem path to the persisted index JSON.
+        settings: Triage configuration.
+
+    Returns:
+        A DetectionResult with the triaged changed symbols, linked suspects, and
+        drop counts keyed by reason (including ``"no_candidates"`` for symbols
+        that survived triage but produced no suspects).
+    """
+    result, _ = run_detection(repo_root, base, head, index_path, settings)
+    return result
