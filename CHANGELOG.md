@@ -7,6 +7,20 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Detection Core (Week 3)** — deterministic, zero-LLM PR-diff → suspect-doc pipeline:
+  - Minimal config loader (`src/utils/config.py`) reading `configs/base.yaml`.
+  - Content-based `parse_source` extracted from `parse_file` (parses in-memory content).
+  - Diff parser (`src/detection/diff_parser.py`) — unified diff → changed new-file lines.
+  - Git adapter (`src/detection/git_adapter.py`) — `collect_changes(repo, base, head)`
+    yielding `FileChange`s (old/new content + changed lines) from a ref range.
+  - Symbol mapper (`src/detection/symbol_mapper.py`) — classifies changed symbols
+    (added / removed / signature-changed / body-changed); renames as removed + added.
+  - Triage filter (`src/detection/triage_filter.py`) — drops ignored/test paths and
+    comment-only / whitespace-only changes.
+  - Candidate linker (`src/detection/candidate_linker.py`) — suspect doc sections via
+    index links + name references (catches removed symbols).
+  - Detector orchestrator (`src/detection/detector.py`) and `docsmith detect` CLI.
+  - Detection data models (`src/detection/models.py`). 160 tests passing (offline).
 - **Retrieval Core (Week 2)** — embedding-based recall + incremental updates:
   - `Embedder` seam (`src/index/embeddings.py`): `Embedder` protocol, deterministic
     offline `FakeEmbedder` (for tests), and `BgeSmallEmbedder` wrapping
