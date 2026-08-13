@@ -7,6 +7,31 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **LLM Staleness Investigator** — the first LLM stage: turns the detector's suspect
+  doc sections into structured staleness verdicts. Builds, tests, and demos at **$0**.
+  - `LLMClient` seam (`src/llm/client.py`): a provider-neutral
+    `complete_json(system, user, schema) -> dict` protocol with three backends —
+    `FakeLLMClient` (scripted, offline, for tests), `OllamaClient` (free local model via
+    the Ollama HTTP API — the **default**), and `ClaudeClient` (optional/paid Anthropic
+    SDK, lazy-imported so importing the module never needs the SDK, a key, or a socket).
+  - Prompts + schema (`src/llm/prompts.py`): `SYSTEM_PROMPT`, `VERDICT_SCHEMA`, and
+    `build_staleness_prompt` (renders change kind, symbol name, old/new code, doc text).
+  - Investigator (`src/detection/investigator.py`): `build_investigation_inputs`
+    (assembles per-suspect evidence, re-parsing old/new source by symbol),
+    `investigate` (single-prompt structured verdict per suspect; malformed/invalid
+    replies are skipped and counted, while backend-unavailable errors propagate),
+    `investigate_pr` (end-to-end orchestrator), and a `make_client` backend factory.
+  - Investigator data models (`src/detection/models.py`): `Verdict`,
+    `InvestigationInput`, `InvestigationResult`. Detector now exposes `run_detection`
+    (returns the `FileChange`s alongside the `DetectionResult`).
+  - `docsmith investigate` CLI (`--backend fake|ollama|claude`, `--model`) printing
+    per-section `STALE`/`OK` verdicts; backend-unavailable errors surface a clear
+    message and a non-zero exit.
+  - `make investigate-demo` + `scripts/dev/investigate_demo.sh` — a free, local,
+    end-to-end demo on the bundled fixture repo; README "See it work (free, local)".
+  - LLM settings in `configs/base.yaml` (`backend`, `ollama_model`, `ollama_host`,
+    `claude_model`). Default `pytest` suite stays fully offline; a real-Ollama test is
+    gated behind `DOCSMITH_RUN_OLLAMA_TESTS=1`. 202 tests passing (offline).
 - **Detection Core (Week 3)** — deterministic, zero-LLM PR-diff → suspect-doc pipeline:
   - Minimal config loader (`src/utils/config.py`) reading `configs/base.yaml`.
   - Content-based `parse_source` extracted from `parse_file` (parses in-memory content).
