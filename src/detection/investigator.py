@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
-from src.detection.models import FileChange, InvestigationInput, Suspect
+import logging
+
+from src.detection.models import (
+    FileChange,
+    InvestigationInput,
+    InvestigationResult,
+    Suspect,
+    Verdict,
+)
+from src.llm.client import LLMClient
+from src.llm.prompts import SYSTEM_PROMPT, VERDICT_SCHEMA, build_staleness_prompt
 from src.models import Index
 from src.parsing.code_parser import parse_source
 from src.parsing.languages import language_for_path
+
+logger = logging.getLogger(__name__)
 
 
 def build_investigation_inputs(
@@ -87,3 +99,84 @@ def _extract_source(content: str | None, file: str, qualified_name: str) -> str 
 
     lines = content.splitlines()
     return "\n".join(lines[symbol.start_line - 1 : symbol.end_line])
+
+
+def investigate(inputs: list[InvestigationInput], client: LLMClient) -> InvestigationResult:
+    """Ask the LLM to judge staleness for each investigation input.
+
+    Args:
+        inputs: One evidence bundle per symbol/doc-section pairing to judge.
+        client: The LLM client used to request each staleness verdict.
+
+    Returns:
+        An `InvestigationResult` with one `Verdict` per input that produced a valid,
+        well-shaped response. Inputs whose LLM call raises or whose response fails
+        validation are counted under `skipped["llm_error"]` rather than aborting the
+        batch.
+    """
+    result = InvestigationResult()
+
+    for inp in inputs:
+        try:
+            raw = client.complete_json(SYSTEM_PROMPT, build_staleness_prompt(inp), VERDICT_SCHEMA)
+            verdict = _parse_verdict(raw, inp)
+        except Exception as exc:  # noqa: BLE001 - one bad input must not abort the batch
+            result.skipped["llm_error"] = result.skipped.get("llm_error", 0) + 1
+            logger.warning(
+                "Skipping investigation for symbol=%s section=%s: %s",
+                inp.symbol_id,
+                inp.section_id,
+                exc,
+            )
+            continue
+
+        result.verdicts.append(verdict)
+
+    return result
+
+
+def _parse_verdict(raw: dict, inp: InvestigationInput) -> Verdict:
+    """Validate and convert a raw LLM response into a `Verdict`.
+
+    Args:
+        raw: The parsed JSON response from the LLM client.
+        inp: The investigation input the response corresponds to.
+
+    Returns:
+        A `Verdict` built from `raw`, tagged with `inp`'s symbol/section ids.
+
+    Raises:
+        ValueError: If `raw` is not a dict, is missing a required key, or has a
+            key of the wrong type.
+    """
+    if not isinstance(raw, dict):
+        raise ValueError(f"expected dict response, got {type(raw).__name__}")
+
+    for key in ("stale", "confidence", "reason", "wrong_claims"):
+        if key not in raw:
+            raise ValueError(f"missing required key: {key!r}")
+
+    stale = raw["stale"]
+    if not isinstance(stale, bool):
+        raise ValueError(f"'stale' must be bool, got {type(stale).__name__}")
+
+    confidence = raw["confidence"]
+    if not isinstance(confidence, (int, float)) or isinstance(confidence, bool):
+        raise ValueError(f"'confidence' must be int/float, got {type(confidence).__name__}")
+
+    reason = raw["reason"]
+    if not isinstance(reason, str):
+        raise ValueError(f"'reason' must be str, got {type(reason).__name__}")
+
+    wrong_claims = raw["wrong_claims"]
+    if not isinstance(wrong_claims, list) or not all(isinstance(c, str) for c in wrong_claims):
+        raise ValueError("'wrong_claims' must be a list of str")
+
+    return Verdict(
+        symbol_id=inp.symbol_id,
+        section_id=inp.section_id,
+        stale=stale,
+        confidence=float(confidence),
+        reason=reason,
+        wrong_claims=tuple(wrong_claims),
+    )
