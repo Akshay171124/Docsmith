@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.detection.investigator import investigate
 from src.detection.models import ChangeKind, InvestigationInput
 from src.llm.client import FakeLLMClient
@@ -67,3 +69,15 @@ def test_mixed_batch_one_valid_one_malformed() -> None:
     assert len(result.verdicts) == 1
     assert result.verdicts[0].section_id == "README.md#a"
     assert result.skipped == {"llm_error": 1}
+
+
+def test_backend_unavailable_propagates_instead_of_being_skipped() -> None:
+    inp = _input()
+
+    def raise_unavailable(_user: str) -> dict:
+        raise RuntimeError("Could not reach Ollama at http://localhost:11434.")
+
+    fake = FakeLLMClient(raise_unavailable)
+
+    with pytest.raises(RuntimeError, match="Could not reach Ollama"):
+        investigate([inp], fake)

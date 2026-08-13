@@ -113,9 +113,14 @@ def investigate(inputs: list[InvestigationInput], client: LLMClient) -> Investig
 
     Returns:
         An `InvestigationResult` with one `Verdict` per input that produced a valid,
-        well-shaped response. Inputs whose LLM call raises or whose response fails
-        validation are counted under `skipped["llm_error"]` rather than aborting the
-        batch.
+        well-shaped response. Inputs whose response is malformed or fails validation
+        (`ValueError`, `KeyError`, `TypeError` — including `json.JSONDecodeError`,
+        a `ValueError` subclass, from a responding backend that returns non-JSON
+        content) are counted under `skipped["llm_error"]` rather than aborting the
+        batch. A backend-unavailable `RuntimeError` (e.g. Ollama unreachable, or a
+        missing Claude API key) is NOT caught here: it propagates out of this
+        function and aborts the batch, since every remaining suspect would fail
+        identically.
     """
     result = InvestigationResult()
 
@@ -123,7 +128,7 @@ def investigate(inputs: list[InvestigationInput], client: LLMClient) -> Investig
         try:
             raw = client.complete_json(SYSTEM_PROMPT, build_staleness_prompt(inp), VERDICT_SCHEMA)
             verdict = _parse_verdict(raw, inp)
-        except Exception as exc:  # noqa: BLE001 - one bad input must not abort the batch
+        except (ValueError, KeyError, TypeError) as exc:
             result.skipped["llm_error"] = result.skipped.get("llm_error", 0) + 1
             logger.warning(
                 "Skipping investigation for symbol=%s section=%s: %s",

@@ -6,6 +6,9 @@ import pathlib
 import subprocess
 import sys
 
+import pytest
+
+import docsmith
 from src.detection.investigator import investigate_pr
 from src.index.builder import build_index
 from src.llm.client import FakeLLMClient
@@ -130,3 +133,43 @@ def test_investigate_cli_prints_stale_verdict(tmp_path):
     assert "STALE" in result.stdout
     assert "README.md#" in result.stdout
     assert "create_user" in result.stdout
+
+
+def test_investigate_cli_reports_backend_unavailable_and_exits_1(monkeypatch, capsys):
+    error_message = (
+        "Could not reach Ollama at http://localhost:11434 — start it or run "
+        "`ollama pull qwen2.5-coder:7b`"
+    )
+
+    def fake_investigate_pr(*_args, **_kwargs):
+        raise RuntimeError(error_message)
+
+    monkeypatch.setattr(docsmith, "investigate_pr", fake_investigate_pr)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "docsmith.py",
+            "investigate",
+            "--repo",
+            "dummy-repo",
+            "--base",
+            "base-sha",
+            "--head",
+            "head-sha",
+            "--index",
+            "dummy-index.json",
+            "--config",
+            "configs/base.yaml",
+            "--backend",
+            "ollama",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        docsmith.main()
+
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert error_message in captured.err
+    assert captured.out == ""

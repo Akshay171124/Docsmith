@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 from src.detection.detector import detect
 from src.detection.investigator import investigate_pr, make_client
@@ -182,7 +183,11 @@ def main() -> None:
                 settings.ollama_model = args.model
 
         client = make_client(settings, backend_override=args.backend)
-        result = investigate_pr(args.repo, args.base, args.head, args.index, settings, client)
+        try:
+            result = investigate_pr(args.repo, args.base, args.head, args.index, settings, client)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
 
         for verdict in result.verdicts:
             symbol_name = verdict.symbol_id.split("::")[-1].rsplit(".", 1)[-1]
