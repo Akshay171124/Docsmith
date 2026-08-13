@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from src.detection.detector import run_detection
 from src.detection.models import (
     FileChange,
     InvestigationInput,
@@ -11,11 +12,13 @@ from src.detection.models import (
     Suspect,
     Verdict,
 )
-from src.llm.client import LLMClient
+from src.index.store import load_index
+from src.llm.client import ClaudeClient, FakeLLMClient, LLMClient, OllamaClient
 from src.llm.prompts import SYSTEM_PROMPT, VERDICT_SCHEMA, build_staleness_prompt
 from src.models import Index
 from src.parsing.code_parser import parse_source
 from src.parsing.languages import language_for_path
+from src.utils.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -180,3 +183,73 @@ def _parse_verdict(raw: dict, inp: InvestigationInput) -> Verdict:
         reason=reason,
         wrong_claims=tuple(wrong_claims),
     )
+
+
+def investigate_pr(
+    repo_root: str,
+    base: str,
+    head: str,
+    index_path: str,
+    settings: Settings,
+    client: LLMClient,
+) -> InvestigationResult:
+    """Run detection and investigation end-to-end for a base/head diff.
+
+    Composes the deterministic detection pipeline with the LLM investigator:
+    runs detection to find suspect doc sections, assembles evidence bundles for
+    each suspect, and asks the LLM client to judge staleness for each one.
+
+    Args:
+        repo_root: Path to the git working tree.
+        base: Base ref (old revision).
+        head: Head ref (new revision).
+        index_path: Filesystem path to the persisted index JSON.
+        settings: Triage configuration used by the detection stage.
+        client: The LLM client used to request each staleness verdict.
+
+    Returns:
+        An `InvestigationResult` with one `Verdict` per suspect that produced a
+        valid response, plus skip counts for suspects the investigator couldn't
+        judge.
+    """
+    result, file_changes = run_detection(repo_root, base, head, index_path, settings)
+    index = load_index(index_path)
+    inputs = build_investigation_inputs(result.suspects, file_changes, index)
+    return investigate(inputs, client)
+
+
+def make_client(settings: Settings, backend_override: str | None = None) -> LLMClient:
+    """Construct the LLM client indicated by settings (or an explicit override).
+
+    Args:
+        settings: Configuration providing the default backend and per-backend
+            model/host fields.
+        backend_override: If given, takes precedence over `settings.llm_backend`.
+
+    Returns:
+        An `LLMClient` for the selected backend.
+
+    Raises:
+        ValueError: If the selected backend name is not one of `"ollama"`,
+            `"claude"`, or `"fake"`.
+    """
+    backend = backend_override or settings.llm_backend
+
+    if backend == "ollama":
+        return OllamaClient(settings.ollama_model, settings.ollama_host)
+    if backend == "claude":
+        return ClaudeClient(settings.claude_model)
+    if backend == "fake":
+        # Offline stand-in for CLI smoke tests only: scripted to always report
+        # staleness so `docsmith investigate --backend fake` demonstrably works
+        # without a real LLM backend.
+        return FakeLLMClient(
+            {
+                "stale": True,
+                "confidence": 0.9,
+                "reason": "fake",
+                "wrong_claims": [],
+            }
+        )
+
+    raise ValueError(f"Unknown LLM backend: {backend!r} (expected 'ollama', 'claude', or 'fake')")
