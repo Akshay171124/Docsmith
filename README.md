@@ -52,6 +52,32 @@ pip install -r requirements.txt
 python docsmith.py --repo . --base main --head HEAD
 ```
 
+## See it work (free, local)
+
+You can see Docsmith produce real staleness verdicts from a local LLM, at $0, with no
+API key:
+
+```bash
+# 1. Install Ollama (https://ollama.com) and pull a coding model.
+ollama pull qwen2.5-coder:7b
+
+# 2. Run the end-to-end demo.
+make investigate-demo
+```
+
+The demo builds an index over a small sample repo, makes a scripted signature change
+to a documented function, and runs `docsmith investigate --backend ollama` against it —
+printing the model's staleness verdict for the now-outdated doc section.
+
+The investigator's LLM backend is pluggable (`--backend` / `llm.backend` in config):
+
+- `fake` — a scripted, offline stand-in used by the test suite.
+- `ollama` (default) — free, local, no API key; requires a running Ollama server.
+- `claude` — optional, higher-quality backend; requires `ANTHROPIC_API_KEY`.
+
+Note this stage only judges whether a doc section is stale — the repair/fix-PR stages
+described above are still in development.
+
 ## Status
 
 Early development. See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)
