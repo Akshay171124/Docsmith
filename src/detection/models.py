@@ -90,6 +90,66 @@ class Suspect:
     via: str
 
 
+@dataclass(frozen=True)
+class Verdict:
+    """The investigator's judgment on whether a doc section is stale for a symbol.
+
+    Attributes:
+        symbol_id: ``ChangedSymbol.id`` of the symbol under investigation.
+        section_id: Identifier of the documentation section being judged.
+        stale: Whether the doc section is stale relative to the symbol's current state.
+        confidence: The investigator's confidence in ``stale``, from 0.0 to 1.0.
+        reason: Human-readable explanation for the verdict.
+        wrong_claims: Specific claims in the doc section that are no longer accurate.
+    """
+
+    symbol_id: str
+    section_id: str
+    stale: bool
+    confidence: float
+    reason: str
+    wrong_claims: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class InvestigationInput:
+    """The evidence handed to the investigator for a single symbol/section pairing.
+
+    Attributes:
+        symbol_id: ``ChangedSymbol.id`` of the symbol under investigation.
+        section_id: Identifier of the documentation section being judged.
+        change_kind: The kind of change made to the underlying symbol.
+        symbol_name: Unqualified name of the symbol.
+        old_code: Symbol source before the change, or ``None`` if it did not exist
+            (e.g. ``ChangeKind.ADDED``).
+        new_code: Symbol source after the change, or ``None`` if it no longer exists
+            (e.g. ``ChangeKind.REMOVED``).
+        doc_section_text: Full text of the documentation section being judged.
+    """
+
+    symbol_id: str
+    section_id: str
+    change_kind: ChangeKind
+    symbol_name: str
+    old_code: str | None
+    new_code: str | None
+    doc_section_text: str
+
+
+@dataclass
+class InvestigationResult:
+    """Aggregate output of the investigation stage for a batch of suspects.
+
+    Attributes:
+        verdicts: All verdicts produced by the investigator.
+        skipped: Counts of suspects excluded from investigation, keyed by the reason
+            they were skipped.
+    """
+
+    verdicts: list[Verdict] = field(default_factory=list)
+    skipped: dict[str, int] = field(default_factory=dict)
+
+
 @dataclass
 class DetectionResult:
     """Aggregate output of the detection stage for a single diff.

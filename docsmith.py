@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 
 from src.detection.detector import detect
+from src.detection.investigator import investigate_pr, make_client
 from src.index.builder import build_index, update_index
 from src.index.store import load_index
 from src.utils.config import load_settings
@@ -80,6 +82,47 @@ def main() -> None:
         help="Path to the layered YAML config (default: configs/base.yaml).",
     )
 
+    investigate_parser = subparsers.add_parser(
+        "investigate",
+        help="Run detection and ask an LLM to confirm which suspect sections are stale.",
+    )
+    investigate_parser.add_argument(
+        "--repo",
+        default=".",
+        help="Repository root to scan (default: current directory).",
+    )
+    investigate_parser.add_argument(
+        "--base",
+        required=True,
+        help="Base git ref (old revision).",
+    )
+    investigate_parser.add_argument(
+        "--head",
+        required=True,
+        help="Head git ref (new revision).",
+    )
+    investigate_parser.add_argument(
+        "--index",
+        default=".docsmith/index.json",
+        help="Path to the persisted index JSON (default: .docsmith/index.json).",
+    )
+    investigate_parser.add_argument(
+        "--config",
+        default="configs/base.yaml",
+        help="Path to the layered YAML config (default: configs/base.yaml).",
+    )
+    investigate_parser.add_argument(
+        "--backend",
+        choices=["fake", "ollama", "claude"],
+        default=None,
+        help="LLM backend to use (default: from config).",
+    )
+    investigate_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model name override for the selected backend (default: from config).",
+    )
+
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
@@ -128,6 +171,36 @@ def main() -> None:
             file_suspects = sorted(suspects_by_file[doc_file], key=lambda s: s.section_id)
             for suspect in file_suspects:
                 print(f"  - {suspect.section_id} (via {suspect.via}, {suspect.change_kind.value})")
+
+    elif args.subcommand == "investigate":
+        settings = load_settings(args.config)
+
+        if args.model:
+            effective_backend = args.backend or settings.llm_backend
+            if effective_backend == "claude":
+                settings.claude_model = args.model
+            else:
+                settings.ollama_model = args.model
+
+        client = make_client(settings, backend_override=args.backend)
+        try:
+            result = investigate_pr(args.repo, args.base, args.head, args.index, settings, client)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
+
+        for verdict in result.verdicts:
+            symbol_name = verdict.symbol_id.split("::")[-1].rsplit(".", 1)[-1]
+            if verdict.stale:
+                print(f"STALE ({verdict.confidence:.2f}) {verdict.section_id} — {symbol_name}")
+                for claim in verdict.wrong_claims:
+                    print(f"  - {claim}")
+            else:
+                print(f"OK          {verdict.section_id} — {symbol_name}")
+
+        if result.skipped:
+            n_skipped = sum(result.skipped.values())
+            print(f"({n_skipped} skipped)")
 
 
 if __name__ == "__main__":

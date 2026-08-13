@@ -42,5 +42,9 @@ linking:
 
 # LLM.
 llm:
-  model: "claude-sonnet-4-6"
-  max_investigator_tool_calls: 6
+  model: "claude-sonnet-4-6"          # legacy/unused (kept)
+  max_investigator_tool_calls: 6      # legacy/unused (kept)
+  backend: ollama                     # fake | ollama | claude
+  ollama_model: qwen2.5-coder:7b
+  ollama_host: http://localhost:11434
+  claude_model: claude-sonnet-5

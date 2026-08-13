@@ -77,3 +77,40 @@ class TestLoadSettingsOverrides:
         s = load_settings(overrides={"skip_comment_only": False})
         assert s.skip_whitespace_only is True
         assert "**/test_*.py" in s.ignore_paths
+
+    def test_override_llm_backend(self):
+        s = load_settings(overrides={"llm_backend": "fake"})
+        assert s.llm_backend == "fake"
+
+
+class TestLoadSettingsLlmFromBaseYaml:
+    """Tests against the real configs/base.yaml llm: block."""
+
+    def test_llm_backend_is_ollama(self):
+        s = load_settings()
+        assert s.llm_backend == "ollama"
+
+    def test_ollama_model(self):
+        s = load_settings()
+        assert s.ollama_model == "qwen2.5-coder:7b"
+
+    def test_ollama_host(self):
+        s = load_settings()
+        assert s.ollama_host == "http://localhost:11434"
+
+    def test_claude_model(self):
+        s = load_settings()
+        assert s.claude_model == "claude-sonnet-5"
+
+
+class TestLoadSettingsLlmMissingSection:
+    """Tests for the llm: section being absent entirely."""
+
+    def test_defaults_when_llm_section_absent(self, tmp_path):
+        minimal = tmp_path / "minimal.yaml"
+        minimal.write_text("linking: {}\n")
+        s = load_settings(path=str(minimal))
+        assert s.llm_backend == "ollama"
+        assert s.ollama_model == "qwen2.5-coder:7b"
+        assert s.ollama_host == "http://localhost:11434"
+        assert s.claude_model == "claude-sonnet-5"

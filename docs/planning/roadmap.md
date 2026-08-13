@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Weeks 1–3 complete ✅ — next up is the **LLM staleness investigator** (deferred from Week 3, the first Claude integration). Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
+**Current focus:** Weeks 1–3 + the **LLM staleness investigator** complete ✅ — next up is **Week 4 (Repair)**. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
 
 ---
 
@@ -92,10 +92,33 @@ name-reference) → `detect` CLI. Also added a minimal config loader (clears a W
 line-number heuristic); non-ASCII filenames (git `quotepath`); candidate linker is O(n×m)
 at scale; CLI loads the index twice. None blocking.
 
-## Next sub-project — LLM Staleness Investigator ⬜ (first Claude integration)
-Given the detector's suspect sections, an LLM (Claude) judges whether each is actually
-stale (old code + new code + doc section → verdict + diagnosis), behind a client seam with
-a fake for offline tests. This is stage 5 of the original pipeline.
+## Sub-project — LLM Staleness Investigator ✅ (first LLM integration)
+Spec: [2026-08-12-llm-investigator-design.md](../superpowers/specs/2026-08-12-llm-investigator-design.md);
+plan: [2026-08-12-llm-investigator.md](../superpowers/plans/2026-08-12-llm-investigator.md).
+**Done:** 202 tests passing (offline). Given the detector's suspect sections, an LLM judges
+whether each is actually stale (old code + new code + doc section → structured verdict +
+wrong-claims), behind an `LLMClient` seam with three backends — `FakeLLMClient` (tests),
+`OllamaClient` (free local model, the default), `ClaudeClient` (optional/paid). Single-prompt
+structured verdict; malformed replies skipped, backend-unavailable errors surfaced. Whole
+sub-project builds/tests/demos at **$0** (`make investigate-demo` runs it free on Ollama).
+
+| Task | Description | Status |
+|---|---|---|
+| 0 | LLM settings in config loader | ✅ |
+| 1 | Investigator data models (`Verdict`/`Input`/`Result`) | ✅ |
+| 2 | `LLMClient` protocol + `FakeLLMClient` | ✅ |
+| 3 | Prompts + `VERDICT_SCHEMA` | ✅ |
+| 4 | Detector refactor (`run_detection` exposes `FileChange`s) | ✅ |
+| 5 | Input assembly (`build_investigation_inputs`) | ✅ |
+| 6 | Investigator core (`investigate`) | ✅ |
+| 7 | `OllamaClient` (free local backend) | ✅ |
+| 8 | `ClaudeClient` (optional/paid backend) | ✅ |
+| 9 | `investigate_pr` orchestrator + `docsmith investigate` CLI | ✅ |
+| 10 | Free `make investigate-demo` + gated real-Ollama test | ✅ |
+
+**Deferred follow-ups (from final review):** guard the `symbol_id` `::` split; cache the
+per-suspect source re-parse; friendlier message on a responding-but-non-JSON Ollama reply;
+shared `symbol_name`-from-id helper (CLI vs. assembly); a gated real-Claude test. None blocking.
 
 ## Week 4 — Repair ⬜
 Targeted repair, validation pass, confidence router; structured outputs end-to-end.
