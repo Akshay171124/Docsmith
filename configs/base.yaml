@@ -48,3 +48,8 @@ llm:
   ollama_model: qwen2.5-coder:7b
   ollama_host: http://localhost:11434
   claude_model: claude-sonnet-5
+
+# Repair (stage 8 routing).
+repair:
+  confidence_threshold: 0.8              # min investigator confidence for an AUTOFIX
+  autofix_change_kinds: [signature_changed]   # change kinds eligible for AUTOFIX

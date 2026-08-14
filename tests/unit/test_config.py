@@ -114,3 +114,23 @@ class TestLoadSettingsLlmMissingSection:
         assert s.ollama_model == "qwen2.5-coder:7b"
         assert s.ollama_host == "http://localhost:11434"
         assert s.claude_model == "claude-sonnet-5"
+
+
+def test_load_settings_reads_repair_block(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text(
+        "repair:\n"
+        "  confidence_threshold: 0.6\n"
+        "  autofix_change_kinds: [signature_changed, body_changed]\n"
+    )
+    s = load_settings(str(cfg))
+    assert s.repair_confidence_threshold == 0.6
+    assert s.repair_autofix_change_kinds == ("signature_changed", "body_changed")
+
+
+def test_load_settings_repair_defaults(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("{}\n")
+    s = load_settings(str(cfg))
+    assert s.repair_confidence_threshold == 0.8
+    assert s.repair_autofix_change_kinds == ("signature_changed",)
