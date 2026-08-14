@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.detection.models import InvestigationInput
+from src.detection.models import InvestigationInput, RepairInput, RepairProposal
 
 SYSTEM_PROMPT = """\
 You are a precise, conservative technical-documentation reviewer.
@@ -90,3 +90,101 @@ Decide whether the documentation section above is stale relative to the code
 change, following the rules in the system prompt. Respond with the structured
 verdict only.
 """
+
+
+REPAIR_SYSTEM_PROMPT = """\
+You are a precise technical-documentation editor.
+
+You will be shown a documentation section that is STALE, the current source code
+of the symbol it describes, and a diagnosis of what is now wrong. Rewrite the
+section so it is accurate for the new code.
+
+Rules:
+- Change ONLY what the diagnosis says is wrong. Preserve everything else exactly:
+  wording, tone, structure, headings, formatting, and any correct details.
+- Do not add new sections, examples, or commentary that were not there before.
+- Keep the same voice and length unless a correction requires otherwise.
+- If nothing actually needs to change, return the section unchanged.
+
+Respond with a single field, revised_text: the full corrected section text.
+"""
+
+REPAIR_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "revised_text": {"type": "string"},
+    },
+    "required": ["revised_text"],
+    "additionalProperties": False,
+}
+
+
+def build_repair_prompt(inp: RepairInput) -> str:
+    """Render the user prompt asking the LLM to rewrite a stale doc section.
+
+    Args:
+        inp: The repair input bundle (section text, new code, diagnosis).
+
+    Returns:
+        A prompt string containing the diagnosis, the new code, and the current
+        section text in clearly delimited blocks. Contains the word "Rewrite".
+    """
+    new_code = inp.new_code if inp.new_code is not None else "(the symbol no longer exists)"
+    wrong = "\n".join(f"- {c}" for c in inp.wrong_claims) or "- (none listed)"
+    return (
+        f"Rewrite the documentation section below so it is accurate.\n\n"
+        f"Symbol: {inp.symbol_name} ({inp.change_kind.value})\n\n"
+        f"Diagnosis (why it is stale):\n{inp.reason}\n\n"
+        f"Specific wrong claims:\n{wrong}\n\n"
+        f"--- NEW CODE ---\n{new_code}\n--- END NEW CODE ---\n\n"
+        f"--- CURRENT SECTION ---\n{inp.section_text}\n--- END CURRENT SECTION ---\n"
+    )
+
+
+VALIDATE_SYSTEM_PROMPT = """\
+You are a careful reviewer checking a proposed revision of a documentation section.
+
+You will be shown the ORIGINAL section, a PROPOSED REVISION, the current source
+code, and the diagnosis that prompted the change. Judge three things:
+- accurate: does the proposed revision correctly describe the new code?
+- preserved: were the parts that were already correct kept intact (nothing correct
+  was dropped, and nothing unrelated was rewritten)?
+- style_ok: is the tone, structure, and formatting consistent with the original?
+
+Be strict: if you are unsure on any axis, mark it false. Respond with the three
+booleans and a short notes string.
+"""
+
+VALIDATION_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "accurate": {"type": "boolean"},
+        "preserved": {"type": "boolean"},
+        "style_ok": {"type": "boolean"},
+        "notes": {"type": "string"},
+    },
+    "required": ["accurate", "preserved", "style_ok", "notes"],
+    "additionalProperties": False,
+}
+
+
+def build_validate_prompt(inp: RepairInput, proposal: RepairProposal) -> str:
+    """Render the user prompt asking the LLM to validate a repair proposal.
+
+    Args:
+        inp: The repair input bundle (for the new code and diagnosis).
+        proposal: The proposed rewrite to validate.
+
+    Returns:
+        A prompt string containing the original section, the proposed revision, the
+        new code, and the diagnosis. Contains the phrase "proposed revision".
+    """
+    new_code = inp.new_code if inp.new_code is not None else "(the symbol no longer exists)"
+    return (
+        f"Review the proposed revision below.\n\n"
+        f"Symbol: {inp.symbol_name} ({inp.change_kind.value})\n\n"
+        f"Diagnosis:\n{inp.reason}\n\n"
+        f"--- NEW CODE ---\n{new_code}\n--- END NEW CODE ---\n\n"
+        f"--- ORIGINAL SECTION ---\n{proposal.original_text}\n--- END ORIGINAL SECTION ---\n\n"
+        f"--- PROPOSED REVISION ---\n{proposal.revised_text}\n--- END PROPOSED REVISION ---\n"
+    )
