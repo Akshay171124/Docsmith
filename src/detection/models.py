@@ -164,3 +164,118 @@ class DetectionResult:
     changed_symbols: list[ChangedSymbol] = field(default_factory=list)
     suspects: list[Suspect] = field(default_factory=list)
     dropped: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RepairInput:
+    """Evidence bundle for repairing one stale doc section.
+
+    Attributes:
+        symbol_id: ``ChangedSymbol.id`` of the symbol whose change made the section stale.
+        section_id: Identifier of the documentation section to repair.
+        file: Repo-relative path of the doc file containing the section.
+        change_kind: The kind of change made to the underlying symbol.
+        symbol_name: Unqualified name of the symbol.
+        new_code: The symbol's source after the change, or None if it no longer exists.
+        section_text: Full current text of the documentation section.
+        reason: The investigator's explanation for why the section is stale.
+        wrong_claims: Specific claims in the section that are no longer accurate.
+        verdict_confidence: The investigator's staleness confidence, from 0.0 to 1.0.
+    """
+
+    symbol_id: str
+    section_id: str
+    file: str
+    change_kind: ChangeKind
+    symbol_name: str
+    new_code: str | None
+    section_text: str
+    reason: str
+    wrong_claims: tuple[str, ...]
+    verdict_confidence: float
+
+
+@dataclass(frozen=True)
+class RepairProposal:
+    """A proposed rewrite of a stale doc section.
+
+    Attributes:
+        symbol_id: ``ChangedSymbol.id`` of the implicated symbol.
+        section_id: Identifier of the documentation section.
+        file: Repo-relative path of the doc file.
+        original_text: The section text before repair.
+        revised_text: The LLM's rewritten section text.
+        diff: Unified diff of original vs. revised, or "" when nothing changed.
+        changed: Whether the rewrite differs from the original (ignoring surrounding
+            whitespace).
+    """
+
+    symbol_id: str
+    section_id: str
+    file: str
+    original_text: str
+    revised_text: str
+    diff: str
+    changed: bool
+
+
+@dataclass(frozen=True)
+class ValidationResult:
+    """An independent quality judgment of a repair proposal.
+
+    Attributes:
+        accurate: Whether the revised text correctly describes the new code.
+        preserved: Whether already-correct parts were left intact.
+        style_ok: Whether tone/structure/formatting is consistent with the original.
+        notes: Short free-text explanation from the validator.
+    """
+
+    accurate: bool
+    preserved: bool
+    style_ok: bool
+    notes: str
+
+
+class RepairRoute(enum.Enum):
+    """Where a repair proposal is routed by the confidence router.
+
+    Attributes:
+        AUTOFIX: High-confidence, mechanical, validator-clean — eligible for a fix-PR.
+        FLAG: Needs human review (validator flag, risky change kind, or low confidence).
+        NO_CHANGE: The rewrite changed nothing; nothing to route.
+    """
+
+    AUTOFIX = "autofix"
+    FLAG = "flag"
+    NO_CHANGE = "no_change"
+
+
+@dataclass(frozen=True)
+class RepairOutcome:
+    """The routed result of repairing one stale section.
+
+    Attributes:
+        proposal: The proposed rewrite and its diff.
+        validation: The validator's judgment, or None when the route is NO_CHANGE.
+        route: The routing decision.
+        reason: Human-readable explanation for the route.
+    """
+
+    proposal: RepairProposal
+    validation: ValidationResult | None
+    route: RepairRoute
+    reason: str
+
+
+@dataclass
+class RepairResult:
+    """The full output of a repair run over a diff.
+
+    Attributes:
+        outcomes: One RepairOutcome per stale section that was processed.
+        skipped: Counts of sections excluded, keyed by reason (e.g. ``"repair_error"``,
+            ``"validation_error"``).
+    """
+
+    outcomes: list[RepairOutcome] = field(default_factory=list)
+    skipped: dict[str, int] = field(default_factory=dict)
