@@ -2,12 +2,14 @@
 
 The protocol has a scripted ``FakeGitHubClient`` for offline tests and a real
 ``PyGithubClient`` that lazy-imports PyGithub (so importing this module needs no
-SDK, token, or network). ``PyGithubClient`` is added in a later task.
+SDK, token, or network).
 """
 
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
+
+from src.github.summary import MARKER
 
 
 @runtime_checkable
@@ -83,3 +85,64 @@ class FakeGitHubClient:
             }
         )
         return self._fix_pr_url
+
+
+class PyGithubClient:
+    """Real GitHubClient backed by PyGithub. Lazy-imports ``github`` inside methods."""
+
+    def __init__(self, repo: str, token: str) -> None:
+        self._repo_name = repo
+        self._token = token
+        self._repo_handle = None
+
+    def _repo(self):  # noqa: ANN202 - PyGithub Repository type is not imported at module scope
+        """Return a cached PyGithub Repository handle, importing the SDK lazily."""
+        if self._repo_handle is None:
+            import github
+
+            self._repo_handle = github.Github(self._token).get_repo(self._repo_name)
+        return self._repo_handle
+
+    def upsert_summary_comment(self, pr_number: int, body: str) -> None:
+        """Edit Docsmith's existing summary comment if present, else create it."""
+        pr = self._repo().get_pull(pr_number)
+        for comment in pr.get_issue_comments():
+            if MARKER in comment.body:
+                comment.edit(body)
+                return
+        pr.create_issue_comment(body)
+
+    def open_or_update_fix_pr(
+        self,
+        head_ref: str,
+        base_ref: str,
+        branch: str,
+        files: dict[str, str],
+        title: str,
+        body: str,
+    ) -> str:
+        """Force-update the fix branch off head, commit files, open/update the PR."""
+        import github
+
+        repo = self._repo()
+        head_sha = repo.get_branch(head_ref).commit.sha
+
+        try:
+            ref = repo.get_git_ref(f"heads/{branch}")
+            ref.edit(head_sha, force=True)
+        except github.GithubException:
+            repo.create_git_ref(f"refs/heads/{branch}", head_sha)
+
+        for path, content in files.items():
+            try:
+                existing = repo.get_contents(path, ref=branch)
+                repo.update_file(path, f"docs: update {path}", content, existing.sha, branch=branch)
+            except github.GithubException:
+                repo.create_file(path, f"docs: create {path}", content, branch=branch)
+
+        owner = self._repo_name.split("/")[0]
+        pulls = list(repo.get_pulls(state="open", head=f"{owner}:{branch}", base=base_ref))
+        if pulls:
+            pulls[0].edit(title=title, body=body)
+            return pulls[0].html_url
+        return repo.create_pull(title=title, body=body, base=base_ref, head=branch).html_url
