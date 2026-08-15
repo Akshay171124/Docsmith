@@ -124,10 +124,11 @@ def repair_pr(
     inv_inputs = build_investigation_inputs(detection.suspects, file_changes, index)
     inv_result = investigate(inv_inputs, client)
     stale = [v for v in inv_result.verdicts if v.stale]
+    verified = sum(1 for v in inv_result.verdicts if not v.stale)
 
     repair_inputs = build_repair_inputs(stale, detection.suspects, file_changes, index)
 
-    result = RepairResult()
+    result = RepairResult(verified=verified)
     for inp in repair_inputs:
         try:
             proposal = repair_section(inp, client)

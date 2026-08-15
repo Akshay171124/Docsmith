@@ -275,7 +275,9 @@ class RepairResult:
         outcomes: One RepairOutcome per stale section that was processed.
         skipped: Counts of sections excluded, keyed by reason (e.g. ``"repair_error"``,
             ``"validation_error"``).
+        verified: Count of investigated sections the LLM judged still accurate (not stale).
     """
 
     outcomes: list[RepairOutcome] = field(default_factory=list)
     skipped: dict[str, int] = field(default_factory=dict)
+    verified: int = 0
