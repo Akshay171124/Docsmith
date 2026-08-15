@@ -12,12 +12,11 @@ from src.detection.models import (
     Suspect,
     Verdict,
 )
+from src.detection.source import extract_symbol_source
 from src.index.store import load_index
 from src.llm.client import ClaudeClient, FakeLLMClient, LLMClient, OllamaClient
 from src.llm.prompts import SYSTEM_PROMPT, VERDICT_SCHEMA, build_staleness_prompt
 from src.models import Index
-from src.parsing.code_parser import parse_source
-from src.parsing.languages import language_for_path
 from src.utils.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -58,8 +57,8 @@ def build_investigation_inputs(
         symbol_name = qualified_name.rsplit(".", 1)[-1]
 
         fc = by_path.get(file)
-        old_code = _extract_source(fc.old_content if fc else None, file, qualified_name)
-        new_code = _extract_source(fc.new_content if fc else None, file, qualified_name)
+        old_code = extract_symbol_source(fc.old_content if fc else None, file, qualified_name)
+        new_code = extract_symbol_source(fc.new_content if fc else None, file, qualified_name)
 
         inputs.append(
             InvestigationInput(
@@ -74,34 +73,6 @@ def build_investigation_inputs(
         )
 
     return inputs
-
-
-def _extract_source(content: str | None, file: str, qualified_name: str) -> str | None:
-    """Extract a symbol's source text from full file content by re-parsing.
-
-    Args:
-        content: Full file content, or None if the file didn't exist at this revision.
-        file: Repo-relative path of the file (used to resolve the language).
-        qualified_name: Fully qualified name of the symbol to extract.
-
-    Returns:
-        The symbol's source lines (1-based, inclusive), or None if `content` is
-        None, the language is unsupported, or the symbol isn't found.
-    """
-    if content is None:
-        return None
-
-    language = language_for_path(file)
-    if language is None:
-        return None
-
-    symbols = parse_source(content, file, language)
-    symbol = next((s for s in symbols if s.qualified_name == qualified_name), None)
-    if symbol is None:
-        return None
-
-    lines = content.splitlines()
-    return "\n".join(lines[symbol.start_line - 1 : symbol.end_line])
 
 
 def investigate(inputs: list[InvestigationInput], client: LLMClient) -> InvestigationResult:

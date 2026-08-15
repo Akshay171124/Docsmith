@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Weeks 1–3 + the **LLM staleness investigator** complete ✅ — next up is **Week 4 (Repair)**. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
+**Current focus:** Weeks 1–4 + the **LLM staleness investigator** complete ✅ — next up is **Week 5 (GitHub Action)**: turn the repair engine's routed corrections into companion fix-PRs, inline flags, and a summary comment. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
 
 ---
 
@@ -120,8 +120,34 @@ sub-project builds/tests/demos at **$0** (`make investigate-demo` runs it free o
 per-suspect source re-parse; friendlier message on a responding-but-non-JSON Ollama reply;
 shared `symbol_name`-from-id helper (CLI vs. assembly); a gated real-Claude test. None blocking.
 
-## Week 4 — Repair ⬜
-Targeted repair, validation pass, confidence router; structured outputs end-to-end.
+## Week 4 — Repair ✅
+Spec: [2026-08-13-repair-engine-design.md](../superpowers/specs/2026-08-13-repair-engine-design.md);
+plan: [2026-08-13-repair-engine.md](../superpowers/plans/2026-08-13-repair-engine.md).
+**Done:** 232 tests passing (offline). Turns stale verdicts into routed doc corrections:
+whole-section LLM rewrite + deterministic `difflib` diff → independent LLM validator gate →
+deterministic confidence router (AUTOFIX / FLAG / NO_CHANGE). Read-only — proposes diffs, never
+writes files or opens PRs (that's Week 5). Reuses the `LLMClient` seam; malformed replies
+skipped, backend-unavailable errors surfaced. `make repair-demo` runs it free on Ollama at **$0**.
+
+| Task | Description | Status |
+|---|---|---|
+| 0 | Repair routing settings in config | ✅ |
+| 1 | Promote `extract_symbol_source` to shared `src/detection/source.py` | ✅ |
+| 2 | Repair data models (`RepairInput`/`Proposal`/`ValidationResult`/`Route`/`Outcome`/`Result`) | ✅ |
+| 3 | Repair + validation prompts and schemas | ✅ |
+| 4 | Repair Engine (`repair_section` + computed diff) | ✅ |
+| 5 | Validator (`validate_repair`) | ✅ |
+| 6 | Confidence Router (`route`) | ✅ |
+| 7 | Input assembly (`build_repair_inputs`) | ✅ |
+| 8 | Orchestrator (`repair_pr`) | ✅ |
+| 9 | `docsmith repair` CLI | ✅ |
+| 10 | Free `make repair-demo` + gated real-Ollama test | ✅ |
+
+**Deferred follow-ups (from final review):** `docsmith repair --backend fake` is degenerate
+(the fixed-verdict fake gives repair no `revised_text`, so sections skip) — route the CLI fake
+by prompt anchor or document it; add per-validator-flag router tests; record that the doc
+parser's identifier regex doesn't link backtick tokens containing parens (e.g. `` `create_user(name)` ``);
+backport the `investigate_demo.sh` unescaped-`$0` banner fix. None blocking.
 
 ## Week 5 — GitHub Action ⬜
 Dockerfile + `action.yml` finalize, PR/comment/inline-flag workflow, run on a real fork.

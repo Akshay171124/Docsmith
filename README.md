@@ -78,6 +78,21 @@ The investigator's LLM backend is pluggable (`--backend` / `llm.backend` in conf
 Note this stage only judges whether a doc section is stale — the repair/fix-PR stages
 described above are still in development.
 
+### See it fix docs (free, local)
+
+With Ollama running (`ollama pull qwen2.5-coder:7b`), propose real doc corrections
+on the bundled fixture — no API key, $0:
+
+```bash
+make repair-demo
+```
+
+Docsmith rewrites the stale section, an independent LLM pass validates the rewrite,
+and each fix is routed: **AUTOFIX** (clean, mechanical, high-confidence) or **FLAG**
+(needs human review). It prints the proposed unified diff; it never writes files or
+opens PRs (that's the Week 5 GitHub Action). The backend is pluggable — `fake`
+(offline tests), `ollama` (default), or `claude` (optional, needs `ANTHROPIC_API_KEY`).
+
 ## Status
 
 Early development. See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)

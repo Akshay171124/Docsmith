@@ -7,6 +7,33 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Repair Engine (Week 4)** — turns stale verdicts into routed doc corrections; read-only
+  (no file writes / GitHub — that's Week 5). Builds, tests, and demos at **$0**.
+  - Repair Engine (`src/repair/repairer.py`): `repair_section` asks the LLM to rewrite a
+    stale section (whole-section rewrite, changing only what's wrong) and computes a
+    deterministic unified diff via `difflib` — the diff is derived, never trusted from the
+    model; a no-op rewrite yields `changed=False` / empty diff.
+  - Validator (`src/repair/validator.py`): `validate_repair` — an independent LLM gate
+    returning `{accurate, preserved, style_ok, notes}`.
+  - Confidence Router (`src/repair/confidence_router.py`): `route` — deterministic
+    AUTOFIX / FLAG / NO_CHANGE. AUTOFIX only when the validator is clean, the change is
+    mechanical (`change_kind` in the configured set, default `signature_changed`), and the
+    staleness confidence meets the threshold; everything else FLAGs for human review.
+  - Orchestrator (`src/repair/engine.py`): `build_repair_inputs` (joins each stale verdict
+    to its suspect to recover the change kind + extracts the new source) and `repair_pr`
+    (detect → investigate → repair → validate → route; malformed replies skipped-and-counted,
+    backend-unavailable errors propagate to the CLI).
+  - Repair data models (`src/detection/models.py`): `RepairInput`, `RepairProposal`,
+    `ValidationResult`, `RepairRoute`, `RepairOutcome`, `RepairResult`. Repair + validation
+    prompts/schemas added to `src/llm/prompts.py`.
+  - `docsmith repair` CLI (`--backend`, `--model`, `--threshold`) printing per-section
+    routes + proposed diffs and a rollup; backend-unavailable errors exit non-zero.
+  - Shared `src/detection/source.py` (`extract_symbol_source`, promoted from the
+    investigator) reused by both stages. Repair settings in `configs/base.yaml`
+    (`repair.confidence_threshold`, `repair.autofix_change_kinds`).
+  - `make repair-demo` + `scripts/dev/repair_demo.sh` — a free, local end-to-end demo;
+    README "See it fix docs (free, local)". Gated real-Ollama repair test behind
+    `DOCSMITH_RUN_OLLAMA_TESTS=1`. 232 tests passing (offline).
 - **LLM Staleness Investigator** — the first LLM stage: turns the detector's suspect
   doc sections into structured staleness verdicts. Builds, tests, and demos at **$0**.
   - `LLMClient` seam (`src/llm/client.py`): a provider-neutral

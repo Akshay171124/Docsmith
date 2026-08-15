@@ -21,6 +21,8 @@ class Settings:
         ollama_model: Model name to request from the Ollama backend.
         ollama_host: Base URL of the Ollama server.
         claude_model: Model name to request from the Claude backend.
+        repair_confidence_threshold: Min investigator confidence for an AUTOFIX route.
+        repair_autofix_change_kinds: Change kinds eligible for AUTOFIX (by ChangeKind value).
     """
 
     ignore_paths: list[str] = field(default_factory=list)
@@ -31,6 +33,8 @@ class Settings:
     ollama_model: str = "qwen2.5-coder:7b"
     ollama_host: str = "http://localhost:11434"
     claude_model: str = "claude-sonnet-5"
+    repair_confidence_threshold: float = 0.8
+    repair_autofix_change_kinds: tuple[str, ...] = ("signature_changed",)
 
 
 def load_settings(
@@ -58,6 +62,7 @@ def load_settings(
     triage = raw.get("triage") or {}
     docs = raw.get("docs") or {}
     llm = raw.get("llm") or {}
+    repair = raw.get("repair") or {}
 
     skip_comment_only = triage.get("skip_comment_only", True)
     if skip_comment_only is None:
@@ -76,6 +81,14 @@ def load_settings(
         ollama_model=llm.get("ollama_model") or "qwen2.5-coder:7b",
         ollama_host=llm.get("ollama_host") or "http://localhost:11434",
         claude_model=llm.get("claude_model") or "claude-sonnet-5",
+        repair_confidence_threshold=(
+            repair.get("confidence_threshold")
+            if repair.get("confidence_threshold") is not None
+            else 0.8
+        ),
+        repair_autofix_change_kinds=tuple(
+            repair.get("autofix_change_kinds") or ["signature_changed"]
+        ),
     )
 
     if overrides:
