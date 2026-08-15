@@ -93,6 +93,37 @@ and each fix is routed: **AUTOFIX** (clean, mechanical, high-confidence) or **FL
 opens PRs (that's the Week 5 GitHub Action). The backend is pluggable — `fake`
 (offline tests), `ollama` (default), or `claude` (optional, needs `ANTHROPIC_API_KEY`).
 
+## Run it on a real PR (free, local)
+
+Docsmith ships as a GitHub Action. Because it defaults to a **free local Ollama**
+model, you can run it end-to-end at **$0** on a **self-hosted runner** (e.g. your Mac):
+
+1. Install Ollama and pull the model: `ollama pull qwen2.5-coder:7b`.
+2. Register your machine as a repository **self-hosted runner** (Settings → Actions →
+   Runners).
+3. Add a workflow that runs on pull requests:
+
+   ```yaml
+   name: Docsmith
+   on: pull_request
+   jobs:
+     docs:
+       runs-on: self-hosted
+       steps:
+         - uses: actions/checkout@v4
+           with:
+             fetch-depth: 0            # Docsmith needs base..head history
+         - uses: ./                    # or your published action ref
+           with:
+             llm-backend: ollama
+             ollama-host: http://localhost:11434
+   ```
+
+On each PR, Docsmith posts a **summary comment**, opens **one companion fix-PR** for
+high-confidence corrections, and lists lower-confidence items for review. It **never
+auto-merges**. To use Claude instead, set `llm-backend: claude` and provide
+`anthropic-api-key` — no code change.
+
 ## Status
 
 Early development. See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)

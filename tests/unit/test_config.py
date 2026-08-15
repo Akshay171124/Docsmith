@@ -134,3 +134,15 @@ def test_load_settings_repair_defaults(tmp_path):
     s = load_settings(str(cfg))
     assert s.repair_confidence_threshold == 0.8
     assert s.repair_autofix_change_kinds == ("signature_changed",)
+
+
+def test_load_settings_reads_auto_fix_false(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("auto_fix: false\n")
+    assert load_settings(str(cfg)).auto_fix is False
+
+
+def test_load_settings_auto_fix_defaults_true(tmp_path):
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("{}\n")
+    assert load_settings(str(cfg)).auto_fix is True

@@ -14,6 +14,7 @@ import sys
 from src.detection.detector import detect
 from src.detection.investigator import investigate_pr, make_client
 from src.detection.models import RepairRoute
+from src.github.action import run_action
 from src.index.builder import build_index, update_index
 from src.index.store import load_index
 from src.repair.engine import repair_pr
@@ -158,6 +159,16 @@ def main() -> None:
         help="Override the AUTOFIX confidence threshold (default: from config).",
     )
 
+    action_parser = subparsers.add_parser(
+        "github-action",
+        help="Run Docsmith as a GitHub Action on the current pull request.",
+    )
+    action_parser.add_argument(
+        "--repo",
+        default=".",
+        help="Path to the checked-out repository (default: current directory).",
+    )
+
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
@@ -276,6 +287,23 @@ def main() -> None:
         print(
             f"{n_auto} auto-fixable · {n_flag} flagged · "
             f"{n_nochange} unchanged · {n_skipped} skipped"
+        )
+
+    elif args.subcommand == "github-action":
+        counts = run_action(os.environ, args.repo)
+        output_path = os.environ.get("GITHUB_OUTPUT")
+        lines = [
+            f"verified={counts.verified}",
+            f"fixed={counts.fixed}",
+            f"flagged={counts.flagged}",
+            f"fix-pr-url={counts.fix_pr_url or ''}",
+        ]
+        if output_path:
+            with open(output_path, "a") as fh:
+                fh.write("\n".join(lines) + "\n")
+        print(
+            f"Docsmith: {counts.verified} verified, {counts.fixed} auto-fixed, "
+            f"{counts.flagged} flagged"
         )
 
 

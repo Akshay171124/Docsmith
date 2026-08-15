@@ -23,6 +23,7 @@ class Settings:
         claude_model: Model name to request from the Claude backend.
         repair_confidence_threshold: Min investigator confidence for an AUTOFIX route.
         repair_autofix_change_kinds: Change kinds eligible for AUTOFIX (by ChangeKind value).
+        auto_fix: Whether the reporter opens a companion fix-PR for AUTOFIX corrections.
     """
 
     ignore_paths: list[str] = field(default_factory=list)
@@ -35,6 +36,7 @@ class Settings:
     claude_model: str = "claude-sonnet-5"
     repair_confidence_threshold: float = 0.8
     repair_autofix_change_kinds: tuple[str, ...] = ("signature_changed",)
+    auto_fix: bool = True
 
 
 def load_settings(
@@ -64,6 +66,10 @@ def load_settings(
     llm = raw.get("llm") or {}
     repair = raw.get("repair") or {}
 
+    auto_fix = raw.get("auto_fix", True)
+    if auto_fix is None:
+        auto_fix = True
+
     skip_comment_only = triage.get("skip_comment_only", True)
     if skip_comment_only is None:
         skip_comment_only = True
@@ -89,6 +95,7 @@ def load_settings(
         repair_autofix_change_kinds=tuple(
             repair.get("autofix_change_kinds") or ["signature_changed"]
         ),
+        auto_fix=auto_fix,
     )
 
     if overrides:
