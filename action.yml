@@ -8,7 +8,15 @@ branding:
 inputs:
   anthropic-api-key:
     description: "Anthropic API key used for staleness verification, repair, and validation."
-    required: true
+    required: false
+  llm-backend:
+    description: "LLM backend: ollama (free, local — default), claude (needs anthropic-api-key), or fake."
+    required: false
+    default: "ollama"
+  ollama-host:
+    description: "Base URL of the Ollama server (reachable from the Action container)."
+    required: false
+    default: "http://host.docker.internal:11434"
   github-token:
     description: "GitHub token for reading diffs and opening PRs/comments."
     required: false
@@ -37,6 +45,8 @@ outputs:
     description: "Number of high-confidence corrections opened as companion PRs."
   flagged:
     description: "Number of low-confidence sections flagged for human review."
+  fix-pr-url:
+    description: "URL of the companion fix-PR opened for high-confidence corrections, if any."
 
 runs:
   using: "docker"

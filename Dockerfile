@@ -16,8 +16,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Pre-download the local embedding model into the image layer.
-# TODO(impl): warm the sentence-transformers cache for BAAI/bge-small-en-v1.5.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')"
 
 COPY . .
 
-ENTRYPOINT ["python", "/app/docsmith.py", "--github-action"]
+ENTRYPOINT ["python", "/app/docsmith.py", "github-action"]
