@@ -7,6 +7,27 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **GitHub Action (Week 5)** — turns routed repair outcomes into real GitHub output on a PR.
+  Never auto-merges. Default suite stays $0/offline; the live Action runs at **$0** on Ollama
+  + `github.token`.
+  - `GitHubClient` write-side seam (`src/github/client.py`): `PyGithubClient` (real, lazy-
+    imports PyGithub so importing needs no SDK/token) + `FakeGitHubClient` (offline tests),
+    with `upsert_summary_comment` and `open_or_update_fix_pr`.
+  - Reporter (`src/github/reporter.py`): posts an always-on **summary comment**, opens **one
+    companion fix-PR** for AUTOFIX corrections, and lists FLAG items with collapsible proposed
+    diffs. Idempotent — re-runs update the same comment (hidden `<!-- docsmith:summary -->`
+    marker) and reuse the `docsmith/fix-pr-{n}` branch.
+  - AUTOFIX file application (`src/github/apply.py`): deterministic span-replace, bottom-up so
+    multiple edits to one file don't drift, trailing newline preserved.
+  - PR-context loader (`src/github/context.py`), summary markdown builder
+    (`src/github/summary.py`), and the `github-action` entrypoint (`src/github/action.py`,
+    `action_settings.py`, `docsmith github-action`) wiring inputs → index → repair → report →
+    `$GITHUB_OUTPUT`.
+  - `Settings.auto_fix` and `RepairResult.verified` (accurate-section count) added.
+  - `action.yml` finalized: `anthropic-api-key` optional; new `llm-backend` (default `ollama`)
+    and `ollama-host` inputs; `fix-pr-url` output. `Dockerfile` bakes in the embedding model.
+  - Gated live-GitHub test (`DOCSMITH_RUN_GITHUB_TESTS=1`) + a "run on a real PR (free,
+    local)" README section. 259 tests passing (offline).
 - **Repair Engine (Week 4)** — turns stale verdicts into routed doc corrections; read-only
   (no file writes / GitHub — that's Week 5). Builds, tests, and demos at **$0**.
   - Repair Engine (`src/repair/repairer.py`): `repair_section` asks the LLM to rewrite a

@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Weeks 1–4 + the **LLM staleness investigator** complete ✅ — next up is **Week 5 (GitHub Action)**: turn the repair engine's routed corrections into companion fix-PRs, inline flags, and a summary comment. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
+**Current focus:** Weeks 1–5 + the **LLM staleness investigator** complete ✅ — the full pipeline now runs end-to-end as a GitHub Action. Next up is **Week 6 (Evaluation & polish)**: the git-history-replay benchmark, a curated regression suite, and a metrics report. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
 
 ---
 
@@ -149,8 +149,40 @@ by prompt anchor or document it; add per-validator-flag router tests; record tha
 parser's identifier regex doesn't link backtick tokens containing parens (e.g. `` `create_user(name)` ``);
 backport the `investigate_demo.sh` unescaped-`$0` banner fix. None blocking.
 
-## Week 5 — GitHub Action ⬜
-Dockerfile + `action.yml` finalize, PR/comment/inline-flag workflow, run on a real fork.
+## Week 5 — GitHub Action ✅
+Spec: [2026-08-15-github-action-design.md](../superpowers/specs/2026-08-15-github-action-design.md);
+plan: [2026-08-15-github-action.md](../superpowers/plans/2026-08-15-github-action.md).
+**Done:** 259 tests passing (offline). Turns the repair engine's routed outcomes into real
+GitHub output on a PR — an always-posted summary comment, one companion fix-PR for AUTOFIX
+corrections (deterministic span-replace), and FLAG items rendered with collapsible proposed
+diffs. **Never auto-merges.** Behind a `GitHubClient` write-side seam (`PyGithubClient` +
+`FakeGitHubClient`); the default suite stays $0/offline (fake GitHub + fake LLM), and the
+live Action runs at **$0** on Ollama + `github.token` (self-hosted runner). Idempotent
+re-runs (marker-based comment upsert + reused `docsmith/fix-pr-{n}` branch).
+
+| Task | Description | Status |
+|---|---|---|
+| 0 | `auto_fix` setting | ✅ |
+| 1 | `RepairResult.verified` (accurate-section count) | ✅ |
+| 2 | PR-context loader (reads the Actions event) | ✅ |
+| 3 | AUTOFIX file application (bottom-up span-replace) | ✅ |
+| 4 | Summary markdown builder (marker + counts + FLAG diffs) | ✅ |
+| 5 | `GitHubClient` seam + `FakeGitHubClient` | ✅ |
+| 6 | `PyGithubClient` (real, lazy-imported) | ✅ |
+| 7 | Reporter (summary comment + companion fix-PR) | ✅ |
+| 8 | `github-action` entrypoint (`run_action` + CLI + `$GITHUB_OUTPUT`) | ✅ |
+| 9 | Finalize `action.yml` (key optional, `llm-backend`) + `Dockerfile` | ✅ |
+| 10 | Gated live-GitHub test + "run on a real PR" README | ✅ |
+
+**Deferred follow-ups (from final review):** narrow `PyGithubClient.open_or_update_fix_pr`'s
+try/except so a mutation error isn't misread as "not found"; wrap GitHub API errors with a
+clean CLI message; fix the AUTOFIX-heading label when auto-fix is on but nothing applies;
+`load_pr_context` malformed-payload → `ValueError` not `KeyError`; escape triple-backticks in
+rendered diffs. None blocking.
+
+## Week 6 — Evaluation & polish ⬜
+History-replay harness, curated regression suite, metrics report + README numbers, demo
+video, (stretch) Marketplace publish.
 
 ## Week 6 — Evaluation & polish ⬜
 History-replay harness, curated regression suite, metrics report + README numbers, demo
