@@ -13,8 +13,10 @@ import sys
 
 from src.detection.detector import detect
 from src.detection.investigator import investigate_pr, make_client
+from src.detection.models import RepairRoute
 from src.index.builder import build_index, update_index
 from src.index.store import load_index
+from src.repair.engine import repair_pr
 from src.utils.config import load_settings
 
 
@@ -123,6 +125,39 @@ def main() -> None:
         help="Model name override for the selected backend (default: from config).",
     )
 
+    repair_parser = subparsers.add_parser(
+        "repair",
+        help="Propose doc corrections for stale sections and route them by confidence.",
+    )
+    repair_parser.add_argument("--repo", default=".", help="Repository root (default: cwd).")
+    repair_parser.add_argument("--base", required=True, help="Base git ref (old revision).")
+    repair_parser.add_argument("--head", required=True, help="Head git ref (new revision).")
+    repair_parser.add_argument(
+        "--index",
+        default=".docsmith/index.json",
+        help="Path to the persisted index JSON (default: .docsmith/index.json).",
+    )
+    repair_parser.add_argument(
+        "--config",
+        default="configs/base.yaml",
+        help="Path to the layered YAML config (default: configs/base.yaml).",
+    )
+    repair_parser.add_argument(
+        "--backend",
+        choices=["fake", "ollama", "claude"],
+        default=None,
+        help="LLM backend to use (default: from config).",
+    )
+    repair_parser.add_argument(
+        "--model", default=None, help="Model override for the selected backend."
+    )
+    repair_parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Override the AUTOFIX confidence threshold (default: from config).",
+    )
+
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
@@ -201,6 +236,47 @@ def main() -> None:
         if result.skipped:
             n_skipped = sum(result.skipped.values())
             print(f"({n_skipped} skipped)")
+
+    elif args.subcommand == "repair":
+        settings = load_settings(args.config)
+
+        if args.model:
+            effective_backend = args.backend or settings.llm_backend
+            if effective_backend == "claude":
+                settings.claude_model = args.model
+            else:
+                settings.ollama_model = args.model
+        if args.threshold is not None:
+            settings.repair_confidence_threshold = args.threshold
+
+        client = make_client(settings, backend_override=args.backend)
+        try:
+            result = repair_pr(args.repo, args.base, args.head, args.index, settings, client)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
+
+        n_auto = n_flag = n_nochange = 0
+        for outcome in result.outcomes:
+            proposal = outcome.proposal
+            symbol_name = proposal.symbol_id.split("::")[-1].rsplit(".", 1)[-1]
+            if outcome.route is RepairRoute.NO_CHANGE:
+                n_nochange += 1
+                continue
+            label = "AUTOFIX " if outcome.route is RepairRoute.AUTOFIX else "FLAG    "
+            if outcome.route is RepairRoute.AUTOFIX:
+                n_auto += 1
+            else:
+                n_flag += 1
+            print(f"{label} {proposal.section_id} — {symbol_name}   ({outcome.reason})")
+            for line in proposal.diff.splitlines():
+                print(f"  {line}")
+
+        n_skipped = sum(result.skipped.values())
+        print(
+            f"{n_auto} auto-fixable · {n_flag} flagged · "
+            f"{n_nochange} unchanged · {n_skipped} skipped"
+        )
 
 
 if __name__ == "__main__":
