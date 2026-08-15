@@ -1,0 +1,12 @@
+{
+  "case_id": "py-comment-negative",
+  "base_files": {
+    "app.py": "def total(items):\n    return sum(items)\n",
+    "README.md": "# App\n\n## Totals\n\nCall `total` to sum a list of numbers.\n"
+  },
+  "head_files": {
+    "app.py": "def total(items):\n    # sum the provided items\n    return sum(items)\n",
+    "README.md": "# App\n\n## Totals\n\nCall `total` to sum a list of numbers.\n"
+  },
+  "gold": {"stale_section_ids": [], "fixes": {}}
+}
