@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** Weeks 1–5 + the **LLM staleness investigator** complete ✅ — the full pipeline now runs end-to-end as a GitHub Action. Next up is **Week 6 (Evaluation & polish)**: the git-history-replay benchmark, a curated regression suite, and a metrics report. Also pending: the API-reference + config/CLI/env doc extractors deferred from Week 2.
+**Current focus:** 🎉 **All six sub-projects complete** (Weeks 1–6 + the LLM staleness investigator). The full self-healing-docs pipeline runs end-to-end as a $0 GitHub Action with a reproducible evaluation harness. Remaining optional/stretch work: the API-reference + config/CLI/env doc extractors deferred from Week 2; a demo video; Marketplace publish.
 
 ---
 
@@ -180,10 +180,39 @@ clean CLI message; fix the AUTOFIX-heading label when auto-fix is on but nothing
 `load_pr_context` malformed-payload → `ValueError` not `KeyError`; escape triple-backticks in
 rendered diffs. None blocking.
 
-## Week 6 — Evaluation & polish ⬜
-History-replay harness, curated regression suite, metrics report + README numbers, demo
-video, (stretch) Marketplace publish.
+## Week 6 — Evaluation & polish ✅
+Spec: [2026-08-15-evaluation-design.md](../superpowers/specs/2026-08-15-evaluation-design.md);
+plan: [2026-08-15-evaluation.md](../superpowers/plans/2026-08-15-evaluation.md).
+**Done:** 279 tests passing (offline). Measures the pipeline with reproducible numbers: a
+version-pinned **curated corpus** (the headline — detection precision/recall/F1, plus a
+secondary correction-quality score) and a real **history-replay** mining harness (coupled
+code+doc commits from a pinned external repo). Cases are file-pairs materialized into scratch
+git repos; detection is scored from the investigator's verdicts (independent of repair). A
+`docsmith evaluate` CLI + `report.py` publish a metrics table to the README "## Results".
+Harness/scoring/mining/report logic is unit-tested offline with fakes (in CI, $0); the real
+numbers come from a manual `make eval` on Ollama (a gated test guards the real path).
 
-## Week 6 — Evaluation & polish ⬜
-History-replay harness, curated regression suite, metrics report + README numbers, demo
-video, (stretch) Marketplace publish.
+| Task | Description | Status |
+|---|---|---|
+| 0 | Evaluation data models (`Gold`/`Case`/`CaseResult`/`MetricsReport`) | ✅ |
+| 1 | Case materializer (file-pairs → scratch git repo; path-traversal guarded) | ✅ |
+| 2 | Scoring (detection P/R/F1 + correction quality) | ✅ |
+| 3 | Curated corpus + loader (4 starter cases, positives + negatives) | ✅ |
+| 4 | Runner (replay + score) | ✅ |
+| 5 | History-replay mining (coupled code+doc commits) | ✅ |
+| 6 | `docsmith evaluate` CLI | ✅ |
+| 7 | Reporting (`report.py` → README "## Results") | ✅ |
+| 8 | `make eval`/`eval-report`, README, gated real-Ollama eval test | ✅ |
+
+**Deferred follow-ups (from final review):** whitespace-collapse in correction scoring could
+mask multi-line differences (secondary metric); `corpus.py` `open()` encoding; mining
+first-parent diff on merge commits. Manual stretch items not built: demo video, Marketplace
+publish. None blocking.
+
+---
+
+## Project status — all six sub-projects complete ✅
+Docsmith runs end-to-end as a GitHub Action: parse → index → detect changed symbols → LLM
+staleness verdict → repair + validate + confidence-route → summary comment + companion
+fix-PR, at **$0** on local Ollama, never auto-merging. **279 tests passing offline; `ruff`
+clean.** Reproduce the evaluation numbers with `make eval && make eval-report`.

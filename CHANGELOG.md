@@ -7,6 +7,22 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Evaluation & Polish (Week 6)** — a reproducible benchmark harness proving the pipeline
+  works, at **$0** on local Ollama (never in CI — the metric-generating runs are manual).
+  - Curated corpus (`evaluation/corpus.py` + `evaluation/data/curated/*.json`): version-pinned
+    replay cases (positives + negatives) → the headline **detection precision/recall/F1** plus a
+    secondary correction-quality score.
+  - Scoring (`evaluation/scoring.py`), case materializer (`evaluation/materialize.py`,
+    file-pairs → scratch git repo with a path-traversal guard), and runner
+    (`evaluation/runner.py`) that replays each case through the real pipeline — detection scored
+    from the investigator's verdicts, independent of repair success.
+  - History-replay mining (`evaluation/history_replay/mine.py`): synthesizes cases from a
+    pinned repo's coupled code+doc commits (the doc edit is hidden and used as gold).
+  - `docsmith evaluate` CLI + `evaluation/report.py` (metrics table published to the README
+    "## Results" section) + `make eval`/`make eval-report`. Gated real-Ollama eval test behind
+    `DOCSMITH_RUN_OLLAMA_TESTS=1`. 279 tests passing (offline).
+  - **This completes the 6-part project:** parse → index → detect → LLM staleness verdict →
+    repair/validate/route → GitHub summary + companion fix-PR, end-to-end at $0, never auto-merging.
 - **GitHub Action (Week 5)** — turns routed repair outcomes into real GitHub output on a PR.
   Never auto-merges. Default suite stays $0/offline; the live Action runs at **$0** on Ollama
   + `github.token`.
