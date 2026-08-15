@@ -40,6 +40,43 @@ def _stale_client() -> FakeLLMClient:
     return FakeLLMClient(respond)
 
 
+def _malformed_repair_client() -> FakeLLMClient:
+    """Correctly flags the section stale but returns an unusable repair reply."""
+
+    def respond(user: str) -> dict:
+        if "Rewrite" in user:
+            return {"not_revised_text": "oops"}
+        if "proposed revision" in user:
+            return {"accurate": True, "preserved": True, "style_ok": True, "notes": ""}
+        return {
+            "stale": True,
+            "confidence": 0.9,
+            "reason": "signature changed",
+            "wrong_claims": ["create_user"],
+        }
+
+    return FakeLLMClient(respond)
+
+
+def test_malformed_repair_does_not_cost_detection_credit():
+    """A section correctly flagged stale must stay a detection hit even if repair fails.
+
+    Regression test: repair_pr silently drops outcomes whose repair reply is
+    malformed, so deriving `flagged` from repair outcomes (instead of from the
+    investigation verdicts) would wrongly turn this into a false negative.
+    """
+    results = evaluate_cases(
+        [POSITIVE],
+        _malformed_repair_client(),
+        embedder=FakeEmbedder(),
+        repair=True,
+        embeddings=False,
+    )
+    assert len(results) == 1
+    assert (results[0].tp, results[0].fn) == (1, 0)
+    assert results[0].corrections == ()
+
+
 def test_runner_scores_positive_case(tmp_path):
     results = evaluate_cases(
         [POSITIVE], _stale_client(), embedder=FakeEmbedder(), repair=True, embeddings=False

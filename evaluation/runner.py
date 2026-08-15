@@ -39,18 +39,22 @@ def _predict(case: Case, client: LLMClient, repair: bool, embeddings: bool) -> t
         index_path = os.path.join(workdir, "index.json")
         build_index(repo, output_path=index_path, embeddings=embeddings, full=True)
         settings = Settings()
+
+        # Detection is always scored from the investigator's own verdicts, never from
+        # repair_pr's outcomes: repair_pr silently drops any stale-verdict section whose
+        # repair reply is malformed, which would otherwise miscount a correct detection
+        # as a false negative. Repair (when requested) only supplies proposed fixes.
+        inv = investigate_pr(repo, base, head, index_path, settings, client)
+        flagged = {v.section_id for v in inv.verdicts if v.stale}
+
+        fixes = {}
         if repair:
             result = repair_pr(repo, base, head, index_path, settings, client)
-            flagged = {o.proposal.section_id for o in result.outcomes}
             fixes = {
                 o.proposal.section_id: o.proposal.revised_text
                 for o in result.outcomes
                 if o.proposal.changed
             }
-        else:
-            inv = investigate_pr(repo, base, head, index_path, settings, client)
-            flagged = {v.section_id for v in inv.verdicts if v.stale}
-            fixes = {}
     return flagged, fixes
 
 

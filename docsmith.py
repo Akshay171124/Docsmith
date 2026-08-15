@@ -374,7 +374,7 @@ def main() -> None:
         client = make_client(settings, backend_override=args.backend)
         embeddings = not args.no_embeddings
         embedder = BgeSmallEmbedder() if embeddings else None
-        report = _run_evaluate(args, client, embedder, embeddings)
+        report = _run_evaluate(args, client, embedder, embeddings, settings)
         print(
             f"[{report.suite}] cases={report.n_cases} "
             f"P={report.precision:.2f} R={report.recall:.2f} F1={report.f1:.2f} "
@@ -382,7 +382,7 @@ def main() -> None:
         )
 
 
-def _run_evaluate(args, client, embedder, embeddings):
+def _run_evaluate(args, client, embedder, embeddings, settings):
     """Load the chosen suite, evaluate it, write the run JSON, and return the MetricsReport.
 
     Args:
@@ -390,6 +390,8 @@ def _run_evaluate(args, client, embedder, embeddings):
         client: The LLM client to replay cases with.
         embedder: Embedder for correction similarity, or None to use the runner's default.
         embeddings: Whether to build each case's index with embeddings.
+        settings: Loaded settings, used to record the effective model when ``--model``
+            is not given.
 
     Returns:
         The aggregated MetricsReport for the suite run.
@@ -406,7 +408,11 @@ def _run_evaluate(args, client, embedder, embeddings):
         cases = mine_cases(args.repo, args.base, args.head)
 
     backend = args.backend or "ollama"
-    model = args.model or ""
+    if args.model:
+        model = args.model
+    else:
+        effective_backend = args.backend or settings.llm_backend
+        model = settings.claude_model if effective_backend == "claude" else settings.ollama_model
     results, report = run_suite(
         cases,
         client,
