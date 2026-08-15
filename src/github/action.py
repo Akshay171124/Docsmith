@@ -47,6 +47,10 @@ def run_action(
     build_index(repo_root, output_path=index_path, embeddings=embeddings, full=True)
     index = load_index(index_path)
 
+    api_key = env.get("INPUT_ANTHROPIC-API-KEY")
+    if api_key:
+        os.environ["ANTHROPIC_API_KEY"] = api_key
+
     llm = llm_client or make_client(settings)
     result = repair_pr(repo_root, pr.base_sha, pr.head_sha, index_path, settings, llm)
 

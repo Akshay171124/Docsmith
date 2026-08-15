@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from src.github.action import run_action
 from src.github.client import FakeGitHubClient
@@ -57,6 +58,22 @@ def test_run_action_reports_autofix(tmp_path):
     assert gh.fix_prs[0]["branch"] == "docsmith/fix-pr-7"
     assert "create_user(name, email)" in gh.fix_prs[0]["files"]["README.md"]
     assert MARKER in gh.comments[7] and "auto-fixed" in gh.comments[7]
+
+
+def test_run_action_plumbs_anthropic_key_to_env(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    repo, base, head, _index_path = _setup_repo(tmp_path)
+    env = {
+        "GITHUB_REPOSITORY": "octo/repo",
+        "GITHUB_EVENT_PATH": _event(tmp_path, base, head),
+        "INPUT_ANTHROPIC-API-KEY": "sk-test-123",
+    }
+    run_action(
+        env, str(repo), embeddings=False,
+        llm_client=_pipeline_client(), gh_client=FakeGitHubClient(),
+    )
+    assert os.environ.get("ANTHROPIC_API_KEY") == "sk-test-123"
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
 
 def test_github_action_cli_writes_outputs(tmp_path, monkeypatch):
