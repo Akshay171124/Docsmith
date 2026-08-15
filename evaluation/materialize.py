@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 
 from evaluation.models import Case
 
 
 def _git(repo: str, *args: str) -> None:
+    """Run a git command in ``repo``, raising on non-zero exit."""
     subprocess.run(["git", "-C", repo, *args], check=True, capture_output=True)
 
 
 def _rev(repo: str) -> str:
+    """Return the current HEAD sha of ``repo``."""
     return subprocess.run(
         ["git", "-C", repo, "rev-parse", "HEAD"], check=True, capture_output=True, text=True
     ).stdout.strip()
@@ -24,10 +27,17 @@ def _write_tree(repo: str, files: dict[str, str]) -> None:
         if entry == ".git":
             continue
         path = os.path.join(repo, entry)
-        subprocess.run(["rm", "-rf", path], check=True)
+        if os.path.isdir(path) and not os.path.islink(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+    real_repo = os.path.realpath(repo)
     for rel, content in files.items():
-        dest = os.path.join(repo, rel)
-        os.makedirs(os.path.dirname(dest) or repo, exist_ok=True)
+        dest = os.path.realpath(os.path.join(repo, rel))
+        if dest != real_repo and not dest.startswith(real_repo + os.sep):
+            raise ValueError(f"unsafe path in case files: {rel!r}")
+        os.makedirs(os.path.dirname(dest) or real_repo, exist_ok=True)
         with open(dest, "w") as fh:
             fh.write(content)
 

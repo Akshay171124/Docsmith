@@ -1,5 +1,7 @@
 import subprocess
 
+import pytest
+
 from evaluation.materialize import materialize_case
 from evaluation.models import Case, Gold
 
@@ -40,3 +42,27 @@ def test_materialize_handles_file_removal(tmp_path):
         text=True,
     ).stdout.split()
     assert "a.py" in files_at_head and "b.py" not in files_at_head
+
+
+def test_materialize_rejects_path_traversal(tmp_path):
+    case = Case(
+        case_id="c3",
+        base_files={"../evil.txt": "pwned\n", "a.py": "x\n"},
+        head_files={"a.py": "x\n"},
+        gold=Gold(stale_section_ids=frozenset()),
+    )
+    with pytest.raises(ValueError):
+        materialize_case(case, str(tmp_path))
+    assert not (tmp_path.parent / "evil.txt").exists()
+
+
+def test_materialize_handles_nested_paths(tmp_path):
+    case = Case(
+        case_id="c4",
+        base_files={"docs/api.md": "# API v1\n"},
+        head_files={"docs/api.md": "# API v2\n"},
+        gold=Gold(stale_section_ids=frozenset()),
+    )
+    repo, base, head = materialize_case(case, str(tmp_path))
+    assert _show(repo, base, "docs/api.md") == "# API v1\n"
+    assert _show(repo, head, "docs/api.md") == "# API v2\n"
