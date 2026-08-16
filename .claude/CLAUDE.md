@@ -13,7 +13,7 @@ sync with code. On each PR it detects stale docs, verifies with an LLM, and eith
 a companion fix-PR (high confidence) or flags inline (low confidence). **It never auto-merges.**
 
 - **Design spec (source of truth):** `docs/superpowers/specs/2026-06-11-self-healing-docs-design.md`
-- **Roadmap:** `Todo.md`
+- **Roadmap (living tracker):** `docs/planning/roadmap.md` (`Todo.md` is a historical pointer)
 - Entry point: `docsmith.py` (runs both locally and inside the Action).
 - Config in `configs/` uses layered YAML (`base.yaml` + overrides + action inputs).
 
