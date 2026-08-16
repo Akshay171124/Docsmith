@@ -11,11 +11,15 @@ import argparse
 import os
 import sys
 
+import evaluation.corpus
+from evaluation.history_replay.mine import mine_cases
+from evaluation.runner import run_suite
 from src.detection.detector import detect
 from src.detection.investigator import investigate_pr, make_client
 from src.detection.models import RepairRoute
 from src.github.action import run_action
 from src.index.builder import build_index, update_index
+from src.index.embeddings import BgeSmallEmbedder
 from src.index.store import load_index
 from src.repair.engine import repair_pr
 from src.utils.config import load_settings
@@ -169,6 +173,65 @@ def main() -> None:
         help="Path to the checked-out repository (default: current directory).",
     )
 
+    evaluate_parser = subparsers.add_parser(
+        "evaluate",
+        help="Run the curated or history-replay evaluation suite and report metrics.",
+    )
+    evaluate_parser.add_argument(
+        "--suite",
+        choices=["curated", "history"],
+        required=True,
+        help="Which evaluation suite to run.",
+    )
+    evaluate_parser.add_argument(
+        "--repo",
+        default=".",
+        help="Repository to mine for the history suite (default: current directory).",
+    )
+    evaluate_parser.add_argument(
+        "--base",
+        default=None,
+        help="Base git ref for the history suite (old revision).",
+    )
+    evaluate_parser.add_argument(
+        "--head",
+        default=None,
+        help="Head git ref for the history suite (new revision).",
+    )
+    evaluate_parser.add_argument(
+        "--config",
+        default="configs/base.yaml",
+        help="Path to the layered YAML config (default: configs/base.yaml).",
+    )
+    evaluate_parser.add_argument(
+        "--backend",
+        choices=["fake", "ollama", "claude"],
+        default=None,
+        help="LLM backend to use (default: from config).",
+    )
+    evaluate_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model name override for the selected backend (default: from config).",
+    )
+    evaluate_parser.add_argument(
+        "--no-embeddings",
+        action="store_true",
+        dest="no_embeddings",
+        help="Disable embeddings; use the deterministic FakeEmbedder instead.",
+    )
+    evaluate_parser.add_argument(
+        "--no-repair",
+        action="store_true",
+        dest="no_repair",
+        help="Skip the repair stage and only score detection quality.",
+    )
+    evaluate_parser.add_argument(
+        "--out",
+        default=None,
+        help="Optional path to write the full run JSON (report + per-case results).",
+    )
+
     args = parser.parse_args()
 
     if args.subcommand == "build-index":
@@ -305,6 +368,66 @@ def main() -> None:
             f"Docsmith: {counts.verified} verified, {counts.fixed} auto-fixed, "
             f"{counts.flagged} flagged"
         )
+
+    elif args.subcommand == "evaluate":
+        settings = load_settings(args.config)
+        client = make_client(settings, backend_override=args.backend)
+        embeddings = not args.no_embeddings
+        embedder = BgeSmallEmbedder() if embeddings else None
+        report = _run_evaluate(args, client, embedder, embeddings, settings)
+        print(
+            f"[{report.suite}] cases={report.n_cases} "
+            f"P={report.precision:.2f} R={report.recall:.2f} F1={report.f1:.2f} "
+            f"| corrections: exact={report.exact_match_rate:.2f} sim={report.mean_similarity:.2f}"
+        )
+
+
+def _run_evaluate(args, client, embedder, embeddings, settings):
+    """Load the chosen suite, evaluate it, write the run JSON, and return the MetricsReport.
+
+    Args:
+        args: Parsed CLI args for the ``evaluate`` subcommand.
+        client: The LLM client to replay cases with.
+        embedder: Embedder for correction similarity, or None to use the runner's default.
+        embeddings: Whether to build each case's index with embeddings.
+        settings: Loaded settings, used to record the effective model when ``--model``
+            is not given.
+
+    Returns:
+        The aggregated MetricsReport for the suite run.
+
+    Raises:
+        RuntimeError: If the LLM backend is unavailable (propagated, not caught).
+    """
+    import json
+    from dataclasses import asdict
+
+    if args.suite == "curated":
+        cases = evaluation.corpus.load_curated_cases()
+    else:
+        cases = mine_cases(args.repo, args.base, args.head)
+
+    backend = args.backend or "ollama"
+    if args.model:
+        model = args.model
+    else:
+        effective_backend = args.backend or settings.llm_backend
+        model = settings.claude_model if effective_backend == "claude" else settings.ollama_model
+    results, report = run_suite(
+        cases,
+        client,
+        embedder=embedder,
+        repair=not args.no_repair,
+        embeddings=embeddings,
+        suite=args.suite,
+        backend=backend,
+        model=model,
+    )
+    if args.out:
+        payload = {"report": asdict(report), "results": [asdict(r) for r in results]}
+        with open(args.out, "w") as fh:
+            json.dump(payload, fh, indent=2)
+    return report
 
 
 if __name__ == "__main__":

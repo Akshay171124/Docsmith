@@ -124,6 +124,32 @@ high-confidence corrections, and lists lower-confidence items for review. It **n
 auto-merges**. To use Claude instead, set `llm-backend: claude` and provide
 `anthropic-api-key` — no code change.
 
+## Evaluation
+
+Docsmith ships a **curated evaluation suite** — bundled base/head file pairs with
+hand-labeled gold staleness/fix data — plus a **history-replay harness** that mines a
+real repository's own coupled code+doc commits and replays them, scoring Docsmith's
+detection (precision/recall/F1) and repair (exact-match rate, correction similarity)
+against the same metrics. Both run entirely offline against a `fake` LLM in CI, and
+against a free local **Ollama** model when reproduced by hand — never a paid API — so
+evaluation runs are always $0.
+
+Reproduce the curated run locally (needs Ollama, see [above](#see-it-work-free-local)):
+
+```bash
+make eval          # runs the curated suite via Ollama, writes evaluation/data/runs/curated.json
+make eval-report   # renders the metrics table into the "Results" section below
+```
+
+The demo video and Marketplace publish are manual follow-ups, tracked separately from
+this evaluation harness.
+
+## Results
+
+<!-- docsmith:results -->
+
+_Run `make eval && make eval-report` to populate (free, local, on Ollama)._
+
 ## Status
 
 Early development. See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)

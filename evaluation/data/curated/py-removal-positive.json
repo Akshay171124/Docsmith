@@ -1,0 +1,12 @@
+{
+  "case_id": "py-removal-positive",
+  "base_files": {
+    "app.py": "def deactivate(uid):\n    return True\n",
+    "README.md": "# App\n\n## Users\n\nUse `deactivate` to disable an account.\n"
+  },
+  "head_files": {
+    "app.py": "def archive(uid):\n    return True\n",
+    "README.md": "# App\n\n## Users\n\nUse `deactivate` to disable an account.\n"
+  },
+  "gold": {"stale_section_ids": ["README.md#users"], "fixes": {}}
+}

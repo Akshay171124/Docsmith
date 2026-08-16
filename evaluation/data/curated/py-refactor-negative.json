@@ -1,0 +1,12 @@
+{
+  "case_id": "py-refactor-negative",
+  "base_files": {
+    "app.py": "def total(items):\n    s = 0\n    for i in items:\n        s = s + i\n    return s\n",
+    "README.md": "# App\n\n## Totals\n\nCall `total` to sum a list of numbers.\n"
+  },
+  "head_files": {
+    "app.py": "def total(items):\n    return sum(items)\n",
+    "README.md": "# App\n\n## Totals\n\nCall `total` to sum a list of numbers.\n"
+  },
+  "gold": {"stale_section_ids": [], "fixes": {}}
+}

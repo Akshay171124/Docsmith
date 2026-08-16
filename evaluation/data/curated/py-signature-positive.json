@@ -1,0 +1,12 @@
+{
+  "case_id": "py-signature-positive",
+  "base_files": {
+    "app.py": "def create_user(name):\n    return {\"name\": name}\n",
+    "README.md": "# App\n\n## Users\n\nCall `create_user` with a name to make a user.\n"
+  },
+  "head_files": {
+    "app.py": "def create_user(name, email):\n    return {\"name\": name, \"email\": email}\n",
+    "README.md": "# App\n\n## Users\n\nCall `create_user` with a name to make a user.\n"
+  },
+  "gold": {"stale_section_ids": ["README.md#users"], "fixes": {}}
+}
