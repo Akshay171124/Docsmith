@@ -28,9 +28,16 @@ diff_parser ─► symbol_mapper ─► candidate_linker ─► triage_filter
                                                                             github/reporter
 ```
 
-## Planned per-component docs
-- `parsing.md` — tree-sitter queries, language config, doc-section model
-- `index.md` — index schema, persistence, incremental update
-- `detection.md` — diff→symbol mapping, linking, triage rules
-- `repair.md` — repair/validation prompts, confidence routing
-- `github.md` — reporter behavior, PR/comment formats
+## Per-component references
+
+Dedicated per-component docs (`parsing.md`, `index.md`, etc.) were never split out; the
+authoritative per-sub-project references are the design specs and implementation plans under
+[`docs/superpowers/specs/`](../superpowers/specs/) and
+[`docs/superpowers/plans/`](../superpowers/plans/), with the living progress tracker in
+[`docs/planning/roadmap.md`](../planning/roadmap.md). What each would have covered:
+
+- **parsing** — tree-sitter queries, language config, doc-section model
+- **index** — index schema, persistence, incremental update
+- **detection** — diff→symbol mapping, linking, triage rules
+- **repair** — repair/validation prompts, confidence routing
+- **github** — reporter behavior, PR/comment formats

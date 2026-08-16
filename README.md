@@ -37,19 +37,31 @@ config/CLI/env-var docs.
 
 ## Quick start
 
+Docsmith defaults to a **free local Ollama** model, so it runs at **$0** with no API key
+(see [Run it on a real PR](#run-it-on-a-real-pr-free-local) for the self-hosted-runner setup):
+
 ```yaml
 # .github/workflows/docsmith.yml
 - uses: <owner>/docsmith@v1
   with:
-    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+    llm-backend: ollama          # default; free, local, no API key
     confidence-threshold: 0.8
 ```
 
+To use Claude instead, set `llm-backend: claude` and provide
+`anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}` — no code change.
+
 ## Local usage
+
+The CLI is subcommand-based. Build an index once, then detect / investigate / repair a
+git range (all default to the free Ollama backend):
 
 ```bash
 pip install -r requirements.txt
-python docsmith.py --repo . --base main --head HEAD
+
+python docsmith.py build-index --repo .                       # → .docsmith/index.json
+python docsmith.py investigate --repo . --base main --head HEAD   # LLM staleness verdicts
+python docsmith.py repair      --repo . --base main --head HEAD   # + proposed fixes, routed
 ```
 
 ## See it work (free, local)
@@ -75,8 +87,9 @@ The investigator's LLM backend is pluggable (`--backend` / `llm.backend` in conf
 - `ollama` (default) — free, local, no API key; requires a running Ollama server.
 - `claude` — optional, higher-quality backend; requires `ANTHROPIC_API_KEY`.
 
-Note this stage only judges whether a doc section is stale — the repair/fix-PR stages
-described above are still in development.
+This demo covers the staleness-judgment stage; the repair and GitHub-reporting stages are
+also built — see [See it fix docs](#see-it-fix-docs-free-local) and
+[Run it on a real PR](#run-it-on-a-real-pr-free-local) below.
 
 ### See it fix docs (free, local)
 
@@ -89,9 +102,10 @@ make repair-demo
 
 Docsmith rewrites the stale section, an independent LLM pass validates the rewrite,
 and each fix is routed: **AUTOFIX** (clean, mechanical, high-confidence) or **FLAG**
-(needs human review). It prints the proposed unified diff; it never writes files or
-opens PRs (that's the Week 5 GitHub Action). The backend is pluggable — `fake`
-(offline tests), `ollama` (default), or `claude` (optional, needs `ANTHROPIC_API_KEY`).
+(needs human review). This demo is read-only — it prints the proposed unified diff without
+writing files or opening PRs; the [GitHub Action](#run-it-on-a-real-pr-free-local) does that
+on a real pull request. The backend is pluggable — `fake` (offline tests), `ollama`
+(default), or `claude` (optional, needs `ANTHROPIC_API_KEY`).
 
 ## Run it on a real PR (free, local)
 
@@ -152,5 +166,11 @@ _Run `make eval && make eval-report` to populate (free, local, on Ollama)._
 
 ## Status
 
-Early development. See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)
-for the design spec and [Todo.md](Todo.md) for the roadmap.
+**Feature-complete.** All six sub-projects (Index, Retrieval, Detection, LLM Staleness
+Investigator, Repair, GitHub Action) plus the evaluation harness are built and merged — the
+full pipeline runs end-to-end as a $0 GitHub Action. **279 tests passing offline.**
+
+See [docs/superpowers/specs/2026-06-11-self-healing-docs-design.md](docs/superpowers/specs/2026-06-11-self-healing-docs-design.md)
+for the original design spec and [docs/planning/roadmap.md](docs/planning/roadmap.md) for the
+per-sub-project progress tracker. Remaining optional/stretch work: the API-reference +
+config/CLI/env doc extractors (deferred from Week 2), a demo video, and Marketplace publish.
