@@ -1,0 +1,5 @@
+# Docsmith web playground API — kept separate from requirements.txt so the core
+# library / GitHub Action install stays lean.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27          # used by fastapi.testclient.TestClient
