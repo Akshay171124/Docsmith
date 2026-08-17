@@ -16,12 +16,18 @@ product* and adds a full-stack web dimension (JSON API + UI + deploy) on top of 
 pipeline.
 
 This reuses the Weeks 3–5 machinery (`run_detection` → `investigate` → `repair_pr`) behind
-the `LLMClient` seam; the new code is only a thin web layer (PR fetch + output shaping + a
-single-page UI).
+the `LLMClient` seam; the new code is a decoupled web layer — a Python JSON API plus a
+separate JavaScript single-page app.
 
-**In scope:** a FastAPI backend (`POST /api/analyze` + a served static page), a PR-fetch
-module, an analyze orchestration that shapes `RepairResult` into JSON, a single static
-frontend page, a local run mode + a public Docker deploy, and offline tests.
+**Stack:** a **FastAPI + Pydantic** JSON API (async, auto OpenAPI/Swagger docs), Dockerized
+for a free tier; and a **React + TypeScript + Vite** single-page app (**Tailwind CSS** +
+**shadcn/ui** for styling, **TanStack Query** for API data-fetching) deployed to **Vercel**.
+The two are decoupled and talk over CORS.
+
+**In scope:** the FastAPI API (`POST /api/analyze`, `GET /healthz`, CORS), a PR-fetch
+module, an analyze orchestration that shapes the pipeline output into JSON, the React SPA,
+local dev for both, a split deploy (Vercel frontend / Docker backend), and offline tests
+(backend + frontend).
 
 **Out of scope (Option C — the real hosted GitHub App, later):** posting comments / opening
 fix-PRs; private repos; visitor GitHub tokens; webhooks; persistence / accounts.
@@ -53,9 +59,10 @@ lazily imported (the seam already guarantees this).
 ## 3. Architecture & data flow
 
 ```
-Browser (single page): pr_url + backend(ollama|claude) + credential  ─►  POST /api/analyze
-     │
-FastAPI backend (webapp/):
+React SPA (Vercel): pr_url + backend(ollama|claude) + credential
+     │  fetch (TanStack Query) → CORS → POST {API_BASE}/api/analyze
+     ▼
+FastAPI backend (webapp/, Docker on a free tier):
   1. validate pr_url — public https://github.com/{owner}/{repo}/pull/{n} only
   2. fetch_pr(pr_url, workdir) → (repo_path, base_sha, head_sha)
         · GitHub REST API for the PR's base/head SHAs (+ fork head repo)   [stdlib urllib]
@@ -120,8 +127,12 @@ logic; steps 3–5 are existing functions called unchanged.
   §4.3).
 
 ### 4.3 FastAPI app (`webapp/app.py`)
-- `GET /` → serve `webapp/static/index.html`. `GET /healthz` → `{"status": "ok"}` (for the
-  deploy platform's health check).
+- JSON API only (it does **not** serve the frontend — the SPA is a separate Vercel deploy).
+  `GET /healthz` → `{"status": "ok"}` (deploy health check). FastAPI's auto OpenAPI/Swagger
+  docs at `/docs` come for free.
+- **CORS:** `CORSMiddleware` with an allowlist of origins from a `CORS_ORIGINS` env var
+  (the deployed Vercel URL + `http://localhost:5173` for Vite dev); no wildcard in the
+  deployed config.
 - `POST /api/analyze` — body `AnalyzeRequest`
   (`pr_url: str`, `backend: Literal["ollama","claude","fake"] = "ollama"`,
   `api_key: str | None`, `ollama_host: str | None`, `model: str | None`). Calls
@@ -131,24 +142,35 @@ logic; steps 3–5 are existing functions called unchanged.
   **500** (generic message; details logged, never the credential). Enforces the request cap
   (§6).
 
-### 4.4 Frontend (`webapp/static/index.html`)
-A single self-contained page: Tailwind (CDN) + vanilla JS. A form — PR URL, backend radio
-(`ollama` / `claude`), a credential field that switches label (Ollama host vs Anthropic key),
-an optional model field, and an **Analyze** button — a loading state, an error banner, and a
-results panel: a summary line (`N verified · M auto-fixable · K flagged · J skipped`) and a
-card per section (route badge, a 0–1 confidence bar, the reason, wrong-claims list, and a
-collapsible `<pre>` unified diff). A **prefilled example PR URL** enables a one-click try.
-The page never sends the credential anywhere but this backend.
+### 4.4 Frontend (`frontend/` — React + TypeScript + Vite)
+A Vite SPA in TypeScript, styled with **Tailwind CSS** + **shadcn/ui**, using **TanStack
+Query** for the `POST /api/analyze` call (loading/error/success states handled by the query).
+Structure: a small set of components — an `AnalyzeForm` (PR URL input; backend toggle
+`ollama`/`claude`; a credential field whose label switches Ollama-host vs Anthropic-key; an
+optional model field; **Analyze** button), a `ResultsPanel` (summary line
+`N verified · M auto-fixable · K flagged · J skipped`), and a `SectionCard` (route badge, a
+0–1 confidence bar, reason, wrong-claims list, collapsible unified-diff `<pre>`), plus an
+error banner. A typed API client (`src/api.ts`) reads the backend base URL from
+`import.meta.env.VITE_API_BASE` (defaults to `http://localhost:8000` in dev). TypeScript
+interfaces mirror the API's `AnalyzeResult`/`SectionResult`. A **prefilled example PR URL**
+enables a one-click try. The credential is sent only to the configured API and never
+persisted.
 
 ### 4.5 Packaging & run modes
-- Web deps (`fastapi`, `uvicorn[standard]`) live in a **separate `requirements-web.txt`** so
-  the core/Action install stays lean.
-- **Local:** `make playground` → `uvicorn webapp.app:app --port 8000`. Defaults backend
-  `ollama`, host `http://localhost:11434`. The author opens `localhost:8000` and analyzes a
-  real PR on local Ollama at $0.
-- **Public deploy:** `Dockerfile.web` (installs core + web deps, runs uvicorn, needs `git`)
-  deployed to a **free tier (Hugging Face Spaces — Docker)**. No Ollama in the cloud, so the
-  visitor uses **Claude + their own key**. README documents both modes and the deploy.
+- **Backend** (`webapp/`): web deps (`fastapi`, `uvicorn[standard]`) in a **separate
+  `requirements-web.txt`** so the core/Action install stays lean.
+- **Frontend** (`frontend/`): a standard Vite React-TS project (`package.json`,
+  `vite.config.ts`, `tailwind.config.js`, `tsconfig.json`).
+- **Local dev:** `make api` → `uvicorn webapp.app:app --port 8000` (defaults backend
+  `ollama`, host `http://localhost:11434`); `make web` → `npm --prefix frontend run dev`
+  (Vite on `:5173`, `VITE_API_BASE=http://localhost:8000`). The author opens `localhost:5173`
+  and analyzes a real PR on local Ollama at **$0**.
+- **Public deploy:** the **frontend** deploys to **Vercel** (static build; `VITE_API_BASE`
+  set to the backend URL). The **backend** deploys via `Dockerfile.web` (installs core + web
+  deps, runs uvicorn, needs `git`) to a **free tier (Hugging Face Spaces — Docker; Render
+  free the fallback)**, with `CORS_ORIGINS` set to the Vercel origin. No Ollama in the cloud,
+  so the visitor uses **Claude + their own key**. README documents both modes and both
+  deploys.
 
 ---
 
@@ -159,6 +181,9 @@ The page never sends the credential anywhere but this backend.
   `model: str | None = None`.
 - `SectionResult` / `AnalyzeResult` as in §4.2 (frozen dataclasses; serialized to JSON via
   `dataclasses.asdict`).
+- The frontend mirrors these in `frontend/src/types.ts` as TypeScript interfaces
+  (`AnalyzeRequest`, `SectionResult`, `AnalyzeResult`) — the single source of truth for the
+  wire shape is this section; the Python dataclasses and the TS interfaces must match it.
 - `Settings` is built in `analyze` from the request: `llm_backend=backend`,
   `ollama_host=ollama_host or default`, `claude_model=model or default` /
   `ollama_model=model or default`. The Anthropic key is plumbed to the environment the same
@@ -170,6 +195,8 @@ The page never sends the credential anywhere but this backend.
 
 ## 6. Security & limits
 
+- **CORS allowlist:** the API accepts cross-origin requests only from configured origins
+  (`CORS_ORIGINS` — the Vercel URL + localhost dev), not `*`.
 - **URL allowlist:** only `https://github.com/{owner}/{repo}/pull/{n}` with a `github.com`
   host; anything else → 400. No SSRF surface beyond the GitHub API + the clone.
 - **Credentials:** per-request only; never logged, never written to disk; the 500 path logs
@@ -208,6 +235,10 @@ The page never sends the credential anywhere but this backend.
   monkeypatched `make_client` returning a scripted `FakeLLMClient`) → asserts the JSON
   `summary` counts and a stale `SectionResult` with a proposed diff. Also asserts a bad URL →
   400 and a backend `RuntimeError` → 502. No network, no LLM, no key.
+- **Frontend (Vitest + React Testing Library, offline):** the API client (`src/api.ts`)
+  with `fetch` mocked → parses a fixture `AnalyzeResult`; `SectionCard` renders a route
+  badge + diff from a fixture; `AnalyzeForm` toggles the credential label with the backend.
+  Kept light. `npm run build` (type-check + bundle) must succeed.
 - **Gated real end-to-end (manual):** a real public PR + local Ollama, skipped unless an
   env var is set — proves the live path; not run in CI.
 
@@ -228,11 +259,13 @@ The page never sends the credential anywhere but this backend.
 
 ## 10. Definition of Done
 
-- `make playground` runs the app locally; pasting a real public PR URL with the Ollama
-  backend shows staleness verdicts + proposed fix diffs, at **$0**, read-only.
-- The same app deploys via `Dockerfile.web` to a free tier and works with a visitor-supplied
-  Anthropic key.
-- `POST /api/analyze` returns the documented JSON; bad URLs → 400, backend-unavailable → 502.
+- Locally, `make api` + `make web` run the backend and the React SPA; pasting a real public
+  PR URL with the Ollama backend shows staleness verdicts + proposed fix diffs, at **$0**,
+  read-only.
+- The frontend deploys to **Vercel** and the Dockerized backend to a **free tier**, wired via
+  `VITE_API_BASE` + `CORS_ORIGINS`, and works with a visitor-supplied Anthropic key.
+- `POST /api/analyze` returns the documented JSON; bad URLs → 400, backend-unavailable → 502;
+  `/docs` serves the OpenAPI UI.
 - Default `pytest` suite stays fully offline ($0) and green; `ruff check .` clean; importing
-  the web modules needs no network/key.
-- README documents both run modes and the public deploy URL.
+  the web modules needs no network/key. The frontend `npm run build` and its Vitest suite pass.
+- README documents both local run and both deploys (Vercel + backend), with the public URL.
