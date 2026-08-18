@@ -7,7 +7,7 @@ file is the human-facing rollup of *where we are*.
 
 **Status legend:** ✅ done · 🚧 in progress · ⬜ not started
 
-**Current focus:** 🎉 **All six sub-projects complete** (Weeks 1–6 + the LLM staleness investigator). The full self-healing-docs pipeline runs end-to-end as a $0 GitHub Action with a reproducible evaluation harness. Remaining optional/stretch work: the API-reference + config/CLI/env doc extractors deferred from Week 2; a demo video; Marketplace publish.
+**Current focus:** 🎉 **All seven sub-projects complete** (Weeks 1–6 + the LLM staleness investigator + the web playground). The full self-healing-docs pipeline runs end-to-end as a $0 GitHub Action with a reproducible evaluation harness, plus a $0 web playground for trying it on any public PR. Remaining optional/stretch work: the API-reference + config/CLI/env doc extractors deferred from Week 2; a demo video; Marketplace publish.
 
 ---
 
@@ -209,10 +209,42 @@ mask multi-line differences (secondary metric); `corpus.py` `open()` encoding; m
 first-parent diff on merge commits. Manual stretch items not built: demo video, Marketplace
 publish. None blocking.
 
+## Sub-project — Web Playground ✅
+Spec: [2026-08-17-web-playground-design.md](../superpowers/specs/2026-08-17-web-playground-design.md);
+plan: [2026-08-17-web-playground.md](../superpowers/plans/2026-08-17-web-playground.md).
+**Done:** 297 tests passing (offline; the gated live-PR test skips by default). A $0, read-only
+demo: paste a public GitHub PR URL, get Docsmith's staleness verdicts + proposed fix diffs. A
+FastAPI JSON API (`webapp/`) fetches the PR into a scratch clone, runs the existing
+`investigate_pr`/`repair_pr` pipeline unmodified, and shapes the result as JSON; a decoupled
+React + TypeScript + Vite SPA (`frontend/`) renders it. The two deploy separately — frontend on
+Vercel, backend Dockerized on a free tier — with the cloud visitor supplying their own Claude
+key (no code change). `src/` is untouched by this sub-project.
+
+| Task | Description | Status |
+|---|---|---|
+| 0 | Backend scaffold (`requirements-web.txt`, `webapp/` package) | ✅ |
+| 1 | PR URL parsing (`parse_pr_url`) | ✅ |
+| 2 | PR fetch — GitHub API + git clone (`fetch_pr`) | ✅ |
+| 3 | Analyze service — shapes pipeline output (`webapp/service.py`) | ✅ |
+| 4 | FastAPI app + Dockerfile + Makefile targets | ✅ |
+| 5 | Frontend scaffold (Vite + React + TS + Tailwind + Vitest) | ✅ |
+| 6 | Types + typed API client | ✅ |
+| 7 | UI components + App wiring (react-query) | ✅ |
+| 8 | Deploy config + README + gated live test | ✅ |
+
+**Deferred follow-ups (from final review):** `SectionCard` doesn't display `symbol_id`, so two
+result cards sharing one doc section still look identical to a human (the underlying React-key
+bug is fixed); the per-request lock only protects a single-worker deploy; no per-request
+wall-clock timeout on the clone/index/LLM path; `backend` should be a `Literal` type + a `/docs`
+response model; the `no_change` repair route is uncounted/unstyled; leftover Vite scaffold
+cruft (`App.css`, unused SVG/PNG assets, template `<title>`/README); no frontend CI job. None
+blocking.
+
 ---
 
-## Project status — all six sub-projects complete ✅
+## Project status — all seven sub-projects complete ✅
 Docsmith runs end-to-end as a GitHub Action: parse → index → detect changed symbols → LLM
 staleness verdict → repair + validate + confidence-route → summary comment + companion
-fix-PR, at **$0** on local Ollama, never auto-merging. **279 tests passing offline; `ruff`
-clean.** Reproduce the evaluation numbers with `make eval && make eval-report`.
+fix-PR, at **$0** on local Ollama, never auto-merging — plus a $0 web playground for trying it
+on any public PR. **297 tests passing offline; `ruff` clean.** Reproduce the evaluation numbers
+with `make eval && make eval-report`.

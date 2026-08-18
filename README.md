@@ -138,6 +138,35 @@ high-confidence corrections, and lists lower-confidence items for review. It **n
 auto-merges**. To use Claude instead, set `llm-backend: claude` and provide
 `anthropic-api-key` — no code change.
 
+## Try it (web playground)
+
+Beyond the CLI and GitHub Action, Docsmith ships a small **web playground** — paste a
+public PR URL, get staleness verdicts and proposed fix diffs back in the browser.
+
+**Local dev, $0:**
+
+```bash
+make api   # FastAPI backend on :8000, defaults to the local Ollama backend
+make web   # Vite dev server on :5173
+```
+
+Open `http://localhost:5173`, paste a public GitHub PR URL, and submit — the UI calls
+the backend and renders verdicts plus proposed diffs, no API key required.
+
+**Public deploy:**
+
+- **Frontend** (`frontend/`) deploys to **Vercel** — set `VITE_API_BASE` (see
+  `frontend/.env.example`) in the Vercel project settings to the backend's URL.
+- **Backend** deploys via `Dockerfile.web` to any free container tier (e.g. Hugging
+  Face Spaces or Render) — set `CORS_ORIGINS` to the deployed Vercel origin. In the
+  cloud deployment there's no local Ollama to call, so the visitor picks **Claude** and
+  supplies their own Anthropic API key in the UI — no code change required.
+- **Optional:** set `GITHUB_TOKEN` on the backend to raise the GitHub API rate limit used
+  when looking up PR metadata (unauthenticated requests are limited to 60/hour per IP).
+
+The playground is **read-only** (it never posts to GitHub) and supports **public
+repos only**.
+
 ## Evaluation
 
 Docsmith ships a **curated evaluation suite** — bundled base/head file pairs with
