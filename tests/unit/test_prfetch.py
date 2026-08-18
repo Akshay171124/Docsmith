@@ -1,4 +1,5 @@
 import json
+import urllib.error
 from unittest.mock import MagicMock
 
 import pytest
@@ -78,6 +79,31 @@ def test_fetch_pr_clones_and_returns_shas(tmp_path, monkeypatch):
     assert repo.endswith("repo")
     assert any(c[:2] == ["git", "clone"] for c in calls)               # cloned the base repo
     assert any("pull/7/head" in " ".join(c) for c in calls)            # fetched the PR head ref
+
+
+def test_fetch_pr_checks_out_the_pr_head(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        prfetch.urllib.request,
+        "urlopen",
+        lambda *a, **k: _FakeResponse(_PR_JSON),
+    )
+    calls = []
+    monkeypatch.setattr(prfetch.subprocess, "run", lambda cmd, **k: calls.append(cmd))
+
+    prfetch.fetch_pr("https://github.com/octo/repo/pull/7", str(tmp_path))
+
+    assert ["git", "-C", str(tmp_path / "repo"), "checkout", "-q", "headsha"] in calls
+
+
+def test_fetch_pr_maps_rate_limit_to_value_error(tmp_path, monkeypatch):
+    def raise_403(*a, **k):
+        raise urllib.error.HTTPError(
+            "https://api.github.com", 403, "rate limit exceeded", {}, None
+        )
+
+    monkeypatch.setattr(prfetch.urllib.request, "urlopen", raise_403)
+    with pytest.raises(ValueError, match="GITHUB_TOKEN"):
+        prfetch.fetch_pr("https://github.com/octo/repo/pull/7", str(tmp_path))
 
 
 def test_fetch_pr_rejects_oversized_repo(tmp_path, monkeypatch):

@@ -161,6 +161,8 @@ the backend and renders verdicts plus proposed diffs, no API key required.
   Face Spaces or Render) — set `CORS_ORIGINS` to the deployed Vercel origin. In the
   cloud deployment there's no local Ollama to call, so the visitor picks **Claude** and
   supplies their own Anthropic API key in the UI — no code change required.
+- **Optional:** set `GITHUB_TOKEN` on the backend to raise the GitHub API rate limit used
+  when looking up PR metadata (unauthenticated requests are limited to 60/hour per IP).
 
 The playground is **read-only** (it never posts to GitHub) and supports **public
 repos only**.

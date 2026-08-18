@@ -11,7 +11,7 @@ import urllib.request
 
 _PR_URL_RE = re.compile(r"^https://github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)/?$")
 
-MAX_REPO_KB = 200_000  # ~200 MB reported repo size cap for the playground
+MAX_REPO_KB = 50_000  # ~50 MB reported repo size cap — ephemeral free-tier disk is small
 
 
 def _git(*args: str) -> None:
@@ -48,11 +48,12 @@ def fetch_pr(
         token: Optional GitHub token — only raises the API rate limit.
 
     Returns:
-        ``(repo_path, base_sha, head_sha)``; both commits are present in the clone.
+        ``(repo_path, base_sha, head_sha)``; both commits are present in the clone and
+        the working tree is checked out at ``head_sha``.
 
     Raises:
-        ValueError: If the URL is invalid, the PR/repo is missing (404), or the repo
-            exceeds the size cap.
+        ValueError: If the URL is invalid, the PR/repo is missing (404), the GitHub API
+            rate limit is exhausted (403/429), or the repo exceeds the size cap.
     """
     owner, repo, number = parse_pr_url(pr_url)
     api = f"https://api.github.com/repos/{owner}/{repo}/pulls/{number}"
@@ -74,6 +75,11 @@ def fetch_pr(
             raise ValueError(
                 "PR or repository not found (must be a public GitHub PR)"
             ) from exc
+        if exc.code in (403, 429):
+            raise ValueError(
+                "GitHub API rate limit reached — try again later, or set a GITHUB_TOKEN "
+                "environment variable on the backend to raise the limit"
+            ) from exc
         raise
 
     size_kb = data["base"]["repo"].get("size", 0)
@@ -85,8 +91,13 @@ def fetch_pr(
     clone_url = data["base"]["repo"]["clone_url"]
 
     repo_path = os.path.join(workdir, "repo")
-    _git("clone", clone_url, repo_path)
+    # Blobless partial clone: file contents are fetched on demand, so `git show
+    # <sha>:<path>` still works without downloading every historical blob up front.
+    _git("clone", "--filter=blob:none", clone_url, repo_path)
     # The PR head is reachable via GitHub's pull/<n>/head ref on the base repo
     # (fork-safe).
     _git("-C", repo_path, "fetch", "origin", f"pull/{number}/head")
+    # Check the head out so indexing and repair read the PR's own doc content; base
+    # content stays reachable via `git show base_sha:path`.
+    _git("-C", repo_path, "checkout", "-q", head_sha)
     return repo_path, base_sha, head_sha
