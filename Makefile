@@ -1,4 +1,4 @@
-.PHONY: investigate-demo repair-demo eval eval-report api
+.PHONY: investigate-demo repair-demo eval eval-report api web
 
 investigate-demo:
 	bash scripts/dev/investigate_demo.sh
@@ -14,3 +14,6 @@ eval-report:
 
 api:
 	uvicorn webapp.app:app --reload --port 8000
+
+web:
+	npm --prefix frontend run dev
