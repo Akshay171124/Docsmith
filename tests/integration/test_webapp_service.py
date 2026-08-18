@@ -32,8 +32,11 @@ def test_analyze_shapes_stale_section(tmp_path, monkeypatch):
     def fake_fetch(pr_url, workdir, *, token=None):
         return materialize_case(CASE, workdir)  # (repo, base, head)
 
+    def fake_make_client(settings, backend_override=None):
+        return _pipeline_client()
+
     monkeypatch.setattr(service, "fetch_pr", fake_fetch)
-    monkeypatch.setattr(service, "make_client", lambda settings, backend_override=None: _pipeline_client())
+    monkeypatch.setattr(service, "make_client", fake_make_client)
 
     result = service.analyze("https://github.com/o/r/pull/1", "fake", embeddings=False)
 
