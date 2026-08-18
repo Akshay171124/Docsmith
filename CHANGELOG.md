@@ -7,6 +7,29 @@ release; everything lives under **Unreleased** until then.
 ## [Unreleased]
 
 ### Added
+- **Web Playground** — a $0, read-only web demo: paste a public GitHub PR URL, get
+  Docsmith's staleness verdicts + proposed fix diffs, no install required. Decoupled
+  backend/frontend that deploy separately; `src/` is untouched.
+  - FastAPI JSON API (`webapp/`): `parse_pr_url`/`fetch_pr` (`webapp/prfetch.py`) clone a
+    public PR into a scratch repo via a blobless partial clone, check out the PR head, and
+    enforce a size cap (50MB) and an allowlist of `https://github.com/{owner}/{repo}/pull/{n}`
+    URLs. `analyze()` (`webapp/service.py`) runs the existing `investigate_pr` + `repair_pr`
+    pipeline unmodified against the checkout, joins verdicts to repair outcomes per
+    `(symbol_id, section_id)`, and shapes the result as JSON. `webapp/app.py` exposes
+    `GET /healthz` and `POST /api/analyze` with CORS and error mapping
+    (`ValueError`→400, backend-unavailable `RuntimeError`→502, unexpected→500, credentials
+    never in the response body). Requests are serialized behind an in-process lock so the
+    visitor-supplied Anthropic key (set into the environment only per-request) can't leak
+    across concurrent requests; an optional `GITHUB_TOKEN` raises the GitHub API rate limit.
+  - React + TypeScript + Vite SPA (`frontend/`): a form (PR URL, Ollama/Claude backend
+    choice, credential, optional model) posts via a typed API client
+    (`frontend/src/api.ts`) and renders results (summary counts, per-section confidence,
+    wrong claims, and proposed diff) via TanStack Query — Tailwind utility classes only, no
+    component library.
+  - `Dockerfile.web` (backend, free-tier deploy) + `frontend/vercel.json` (frontend,
+    Vercel), wired via `VITE_API_BASE`/`CORS_ORIGINS`; `make api`/`make web` for local dev.
+    Gated live-PR test (`DOCSMITH_RUN_WEB_LIVE=1`) + a "Try it (web playground)" README
+    section covering both local and cloud deploys. 297 tests passing (offline).
 - **Evaluation & Polish (Week 6)** — a reproducible benchmark harness proving the pipeline
   works, at **$0** on local Ollama (never in CI — the metric-generating runs are manual).
   - Curated corpus (`evaluation/corpus.py` + `evaluation/data/curated/*.json`): version-pinned
