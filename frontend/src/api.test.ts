@@ -6,7 +6,8 @@ const RESULT: AnalyzeResult = {
   summary: { verified: 1, auto_fixable: 1, flagged: 0, skipped: 0 },
   results: [
     {
-      file: "README.md", section_id: "README.md#users", route: "autofix",
+      file: "README.md", section_id: "README.md#users", symbol_id: "create_user",
+      route: "autofix",
       confidence: 0.9, reason: "signature changed", wrong_claims: ["create_user"],
       diff: "-old\n+new",
     },

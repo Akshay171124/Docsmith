@@ -4,7 +4,8 @@ import SectionCard from "./SectionCard";
 import type { SectionResult } from "../types";
 
 const SECTION: SectionResult = {
-  file: "README.md", section_id: "README.md#users", route: "autofix",
+  file: "README.md", section_id: "README.md#users", symbol_id: "create_user",
+  route: "autofix",
   confidence: 0.9, reason: "signature changed", wrong_claims: ["create_user"],
   diff: "-Use `create_user(name)`\n+Use `create_user(name, email)`",
 };

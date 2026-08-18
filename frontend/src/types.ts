@@ -9,6 +9,7 @@ export interface AnalyzeRequest {
 export interface SectionResult {
   file: string;
   section_id: string;
+  symbol_id: string;
   route: string;
   confidence: number;
   reason: string;

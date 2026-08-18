@@ -36,11 +36,11 @@ export default function AnalyzeForm({
       <fieldset className="flex gap-4">
         <label className="flex items-center gap-1 text-sm">
           <input type="radio" name="backend" checked={backend === "ollama"}
-            onChange={() => setBackend("ollama")} /> Ollama (local)
+            onChange={() => { setBackend("ollama"); setCredential(""); }} /> Ollama (local)
         </label>
         <label className="flex items-center gap-1 text-sm">
           <input type="radio" name="backend" checked={backend === "claude"}
-            onChange={() => setBackend("claude")} /> Claude
+            onChange={() => { setBackend("claude"); setCredential(""); }} /> Claude
         </label>
       </fieldset>
       <div>
