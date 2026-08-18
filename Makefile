@@ -1,4 +1,4 @@
-.PHONY: investigate-demo repair-demo eval eval-report
+.PHONY: investigate-demo repair-demo eval eval-report api
 
 investigate-demo:
 	bash scripts/dev/investigate_demo.sh
@@ -11,3 +11,6 @@ eval:
 
 eval-report:
 	python -c "from evaluation.report import load_run, render_table, update_readme; update_readme('README.md', render_table(load_run('evaluation/data/runs/curated.json')))"
+
+api:
+	uvicorn webapp.app:app --reload --port 8000
