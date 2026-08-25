@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-ink text-fg font-sans antialiased;
+  }
+
+  ::selection {
+    background: rgba(255, 122, 61, 0.28);
+  }
+}
+
+@layer utilities {
+  /* The forge heat behind the hero — used exactly once. */
+  .ember-glow {
+    background: radial-gradient(52% 46% at 50% -4%, rgba(255, 122, 61, 0.16), transparent 68%);
+  }
+
+  .grid-floor {
+    background-image: linear-gradient(rgba(40, 48, 60, 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(40, 48, 60, 0.35) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(60% 60% at 50% 0%, #000 20%, transparent 75%);
+    mask-image: radial-gradient(60% 60% at 50% 0%, #000 20%, transparent 75%);
+  }
+
+  .scroll-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: #28303c;
+    border-radius: 999px;
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

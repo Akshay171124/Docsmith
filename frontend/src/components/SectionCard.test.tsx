@@ -14,7 +14,7 @@ describe("SectionCard", () => {
   it("shows the section id, route badge, and diff", () => {
     render(<SectionCard section={SECTION} />);
     expect(screen.getByText("README.md#users")).toBeInTheDocument();
-    expect(screen.getByText(/autofix/i)).toBeInTheDocument();
+    expect(screen.getByText(/ready to fix/i)).toBeInTheDocument();
     expect(screen.getByText(/create_user\(name, email\)/)).toBeInTheDocument();
   });
 });
