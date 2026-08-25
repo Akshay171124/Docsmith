@@ -13,8 +13,8 @@ function renderApp() {
 }
 
 describe("App", () => {
-  it("renders the playground heading", () => {
+  it("renders the hero heading", () => {
     renderApp();
-    expect(screen.getByRole("heading", { name: /docsmith/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /catch the docs/i })).toBeInTheDocument();
   });
 });
