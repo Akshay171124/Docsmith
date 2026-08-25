@@ -2,6 +2,13 @@
 
 > A language-agnostic GitHub Action that keeps technical documentation in sync with code.
 
+[![Live demo](https://img.shields.io/badge/live%20demo-docsmith--ten.vercel.app-ff7a3d?style=flat-square)](https://docsmith-ten.vercel.app)
+
+**▶ Try the live playground: [docsmith-ten.vercel.app](https://docsmith-ten.vercel.app)** —
+paste a public GitHub PR URL and see which docs it made stale, with proposed fix diffs
+(read-only; it never touches the repo). The hosted demo runs on Claude with your own key;
+run it locally for **free** on Ollama (see [Try it (web playground)](#try-it-web-playground)).
+
 On every pull request, Docsmith detects which documentation the code changes have made
 inaccurate, verifies the staleness with an LLM, and either opens a **companion fix-PR**
 (high confidence) or **flags the section inline** for human review (low confidence) —
